@@ -1,0 +1,41 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: {{ .ClusterName }}
+  namespace: {{ .Namespace }}
+spec:
+  replicas: {{ .CPReplicas }}
+  version: {{ .K8sVersion }}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: OpenStackMachineTemplate
+      name: {{ .ClusterName }}-controlplane-v1
+    nodeDrainTimeout: 2m
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+      etcd:
+        local:
+          extraArgs:
+            heartbeat-interval: "1000"
+            election-timeout: "10000"
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          node-ip: '{{ `{{ ds.ec2_metadata.local_ipv4 }}` }}'
+          provider-id: openstack:///{{ `{{ instance_id }}` }}
+        name: '{{ `{{ local_hostname }}` }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          node-ip: '{{ `{{ ds.ec2_metadata.local_ipv4 }}` }}'
+          provider-id: openstack:///{{ `{{ instance_id }}` }}
+        name: '{{ `{{ local_hostname }}` }}'

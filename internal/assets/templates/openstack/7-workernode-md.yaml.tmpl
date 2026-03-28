@@ -1,0 +1,26 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackMachineTemplate
+metadata:
+  name: {{ .ClusterName }}-worker-v1
+  namespace: {{ .Namespace }}
+spec:
+  template:
+    spec:
+      flavor: {{ .WorkerFlavor }}
+      identityRef:
+        cloudName: openstack
+        name: {{ .ClusterName }}-cloud-config
+      image:
+        filter:
+          name: {{ .ImageName }}
+      sshKeyName: {{ .SSHKeyName }}
+      rootVolume:
+        sizeGiB: {{ .WorkerVolumeSize | default 50 }}
+        type: standard
+        availabilityZone:
+          from: Name
+          name: {{ .AvailabilityZone | default "nova" }}
+      {{- if .SecurityGroupID }}
+      securityGroups:
+        - id: {{ .SecurityGroupID }}
+      {{- end }}

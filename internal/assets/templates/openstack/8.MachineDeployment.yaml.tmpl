@@ -1,0 +1,26 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: {{ .ClusterName }}-worker-v1
+  namespace: {{ .Namespace }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .ClusterName }}
+spec:
+  clusterName: {{ .ClusterName }}
+  replicas: {{ .WorkerReplicas }}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ .ClusterName }}
+  template:
+    spec:
+      clusterName: {{ .ClusterName }}
+      version: {{ .K8sVersion }}
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: {{ .ClusterName }}-worker-config
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OpenStackMachineTemplate
+        name: {{ .ClusterName }}-worker-v1

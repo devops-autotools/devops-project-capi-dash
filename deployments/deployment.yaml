@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-dashboard
+  namespace: capi-system
+  labels:
+    app: capi-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: capi-dashboard
+  template:
+    metadata:
+      labels:
+        app: capi-dashboard
+    spec:
+      serviceAccountName: capi-dashboard
+      containers:
+        - name: dashboard
+          image: vcr.infiniband.vn/thalt-test/capi-dash:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: backend
+              containerPort: 8080
+            - name: frontend
+              containerPort: 3000
+          # Không cần PORT — backend mặc định :8080
+          # Không cần OS_* — K8s dùng InClusterConfig qua ServiceAccount
+          # Nếu muốn bật tính năng OpenStack Metadata API (optional):
+          # envFrom:
+          #   - secretRef:
+          #       name: openstack-creds
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capi-dashboard
+  namespace: capi-system
+spec:
+  selector:
+    app: capi-dashboard
+  ports:
+    - name: frontend
+      port: 3000
+      targetPort: 3000
+      nodePort: 30000
+    - name: backend
+      port: 8080
+      targetPort: 8080
+  type: NodePort
+  # Đổi thành NodePort nếu chưa có Ingress:
+  # type: NodePort
+  # ports:
+  #   - port: 80
+  #     targetPort: 3000
+  #     nodePort: 30080

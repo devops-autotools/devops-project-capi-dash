@@ -1,0 +1,62 @@
+# ============================================================
+# Go - Backend
+# ============================================================
+# Binary output
+/dashboard
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test & coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# ============================================================
+# Next.js - Frontend
+# ============================================================
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/.vercel/
+web/coverage/
+web/*.tsbuildinfo
+
+# ============================================================
+# Environment & Secrets — NEVER commit
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+clouds.yaml
+kubeconfig
+*kubeconfig*
+
+# Rendered/sample manifests chứa thông tin thật — không commit
+docs/templates/
+
+# ============================================================
+# Logs & temp
+# ============================================================
+*.log
+*.tmp
+*.swp
+*.swo
+
+# ============================================================
+# OS / Editor
+# ============================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml

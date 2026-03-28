@@ -1,0 +1,25 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ .ClusterName }}
+  namespace: {{ .Namespace }}
+  labels:
+    cloud: openstack
+    cni: {{ .CNI | default "cilium" }}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - {{ .PodCIDR | default "10.244.0.0/16" }}
+    services:
+      cidrBlocks:
+        - {{ .ServiceCIDR | default "10.96.0.0/12" }}
+    serviceDomain: {{ .ServiceDomain | default "cluster.local" }}
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: {{ .ClusterName }}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OpenStackCluster
+    name: {{ .ClusterName }}

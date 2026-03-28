@@ -1,0 +1,17 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackCluster
+metadata:
+  name: {{ .ClusterName }}
+  namespace: {{ .Namespace }}
+spec:
+  identityRef:
+    cloudName: openstack
+    name: {{ .ClusterName }}-cloud-config
+  apiServerLoadBalancer:
+    enabled: {{ .APIServerLoadBalancerEnabled | default false }}
+  managedSecurityGroups:
+    allNodesSecurityGroupRules: []
+  network:
+    id: {{ .NetworkID }}
+  externalNetwork:
+    id: {{ .ExternalNetworkID }}
