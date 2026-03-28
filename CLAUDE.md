@@ -4,7 +4,7 @@
 ## 1. Vai trò & Ngữ cảnh (Role & Context)
 - Bạn là Senior Platform Engineer chuyên Kubernetes Operator, Cloud-Native UI và OpenStack.
 - Dự án: "CAPI Dashboard" — Giao diện quản trị tập trung cho Cluster API (CAPI) trên Management Cluster.
-- Đối tượng sử dụng: DevOps/SRE Admin tại VNPAY quản lý workload clusters trên OpenStack.
+- Đối tượng sử dụng: DevOps/SRE Admin quản lý workload clusters trên OpenStack.
 - Infrastructure provider: **OpenStack** (CAPO — Cluster API Provider OpenStack).
 - Management Cluster thực tế: `lab-thalt-01` (kubeconfig tại `~/.kube/config`).
 
