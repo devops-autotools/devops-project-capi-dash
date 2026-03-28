@@ -142,3 +142,27 @@ func (ctrl *ClusterController) GetLogs(c *gin.Context) {
 	c.Header("Content-Type", "text/plain")
 	io.Copy(c.Writer, stream)
 }
+
+// ListMachines handles GET /api/v1/clusters/:namespace/:name/machines
+func (ctrl *ClusterController) ListMachines(c *gin.Context) {
+	namespace := c.Param("namespace")
+	clusterName := c.Param("name")
+	machines, err := ctrl.Service.ListMachines(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, machines)
+}
+
+// ListMachineDeployments handles GET /api/v1/clusters/:namespace/:name/machinedeployments
+func (ctrl *ClusterController) ListMachineDeployments(c *gin.Context) {
+	namespace := c.Param("namespace")
+	clusterName := c.Param("name")
+	mds, err := ctrl.Service.ListMachineDeployments(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, mds)
+}

@@ -118,3 +118,28 @@
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
 2. **Machine Health Check View** — Hiển thị chi tiết Node/Machine.
 3. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.
+
+## 🟢 Session 4: Machine Health Check View (2026-03-28)
+
+- **Backend — 2 endpoints mới:**
+    - `GET /api/v1/machines?namespace=<ns>` — List toàn bộ CAPI Machine objects, format đầy đủ: phase, nodeName, version, bootstrapReady, infrastructureReady, failureReason.
+    - `GET /api/v1/machinedeployments?namespace=<ns>` — List MachineDeployments kèm replicas/readyReplicas/availableReplicas.
+    - Thêm `ListMachines` + `ListMachineDeployments` vào `K8sRepository`, `ClusterService`, `ClusterController`.
+
+- **Frontend — Trang `/machines` mới:**
+    - Stat cards: Total / Running / Provisioning / Failed machines.
+    - Tab **Machines**: bảng chi tiết từng machine — phase badge, node name, version, bootstrap & infra ready icons, failure reason inline.
+    - Tab **Machine Deployments**: bảng replica count với color indicator (xanh = đủ replica, vàng = thiếu).
+    - Sidebar thêm mục **Machine Health** (icon Cpu) giữa Workload Clusters và Infrastructure.
+
+- **Deploy:**
+    - Review và clean `deployments/deployment.yaml`: bỏ env thừa (PORT, OS_*), thêm readinessProbe + livenessProbe.
+    - Tối ưu `Dockerfile`: Next.js standalone output, Go static binary với `-ldflags="-s -w"`, dùng `tini` làm PID 1.
+
+### 📍 Trạng thái hiện tại (Current Status):
+- **Machine Health Check:** Hoàn thành — hiển thị Machines + MachineDeployments real-time từ Management Cluster.
+- **Deploy:** Dockerfile + deployment.yaml sẵn sàng production.
+
+### ⏭️ Bước tiếp theo (Next Steps):
+1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
+2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.

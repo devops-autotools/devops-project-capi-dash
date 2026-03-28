@@ -200,3 +200,51 @@ func (r *K8sRepository) GetPodLogs(ctx context.Context, namespace, name string, 
 	req := r.clientset.CoreV1().Pods(namespace).GetLogs(name, &podLogOpts)
 	return req.Stream(ctx)
 }
+
+// ListMachines lấy danh sách Machines trong namespace (CAPI CRD)
+func (r *K8sRepository) ListMachines(ctx context.Context, namespace string, clusterName string) ([]unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "Machine",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{}
+	if clusterName != "" {
+		listOpts.LabelSelector = "cluster.x-k8s.io/cluster-name=" + clusterName
+	}
+
+	list, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(ctx, listOpts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+// ListMachineDeployments lấy danh sách MachineDeployments trong namespace
+func (r *K8sRepository) ListMachineDeployments(ctx context.Context, namespace string, clusterName string) ([]unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "MachineDeployment",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{}
+	if clusterName != "" {
+		listOpts.LabelSelector = "cluster.x-k8s.io/cluster-name=" + clusterName
+	}
+
+	list, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(ctx, listOpts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}

@@ -83,10 +83,13 @@ func main() {
 		})
 
 		v1.GET("/clusters", clusterCtrl.List)
-		v1.GET("/clusters/events", clusterCtrl.Events) // SSE Stream
+		v1.GET("/clusters/events", clusterCtrl.Events)
 		v1.GET("/clusters/:namespace/:name", clusterCtrl.Get)
 		v1.POST("/clusters", clusterCtrl.Create)
 		v1.DELETE("/clusters/:namespace/:name", clusterCtrl.Delete)
+		// Machine Health — scoped theo từng cluster
+		v1.GET("/clusters/:namespace/:name/machines", clusterCtrl.ListMachines)
+		v1.GET("/clusters/:namespace/:name/machinedeployments", clusterCtrl.ListMachineDeployments)
 
 		// Logs Viewer
 		v1.GET("/logs/pods", clusterCtrl.ListPods)

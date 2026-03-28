@@ -162,3 +162,77 @@ func (s *ClusterService) CreateWorkloadCluster(ctx context.Context, config model
 func (s *ClusterService) ApplyMany(ctx context.Context, yamls []string) error {
 	return s.repo.ApplyMany(ctx, yamls)
 }
+
+// FormatMachine biến Machine object thành map cho UI
+func (s *ClusterService) FormatMachine(item *unstructured.Unstructured) map[string]interface{} {
+	phase, _, _ := unstructured.NestedString(item.Object, "status", "phase")
+	clusterName, _, _ := unstructured.NestedString(item.Object, "spec", "clusterName")
+	version, _, _ := unstructured.NestedString(item.Object, "spec", "version")
+	nodeName, _, _ := unstructured.NestedString(item.Object, "status", "nodeRef", "name")
+	infraKind, _, _ := unstructured.NestedString(item.Object, "spec", "infrastructureRef", "kind")
+	bootstrapReady, _, _ := unstructured.NestedBool(item.Object, "status", "bootstrapReady")
+	infraReady, _, _ := unstructured.NestedBool(item.Object, "status", "infrastructureReady")
+	failureReason, _, _ := unstructured.NestedString(item.Object, "status", "failureReason")
+	failureMsg, _, _ := unstructured.NestedString(item.Object, "status", "failureMessage")
+
+	return map[string]interface{}{
+		"name":               item.GetName(),
+		"namespace":          item.GetNamespace(),
+		"clusterName":        clusterName,
+		"phase":              phase,
+		"version":            version,
+		"nodeName":           nodeName,
+		"infrastructure":     infraKind,
+		"bootstrapReady":     bootstrapReady,
+		"infrastructureReady": infraReady,
+		"failureReason":      failureReason,
+		"failureMessage":     failureMsg,
+		"createdAt":          item.GetCreationTimestamp(),
+	}
+}
+
+// FormatMachineDeployment biến MachineDeployment object thành map cho UI
+func (s *ClusterService) FormatMachineDeployment(item *unstructured.Unstructured) map[string]interface{} {
+	clusterName, _, _ := unstructured.NestedString(item.Object, "spec", "clusterName")
+	replicas, _, _ := unstructured.NestedInt64(item.Object, "spec", "replicas")
+	readyReplicas, _, _ := unstructured.NestedInt64(item.Object, "status", "readyReplicas")
+	availableReplicas, _, _ := unstructured.NestedInt64(item.Object, "status", "availableReplicas")
+	phase, _, _ := unstructured.NestedString(item.Object, "status", "phase")
+
+	return map[string]interface{}{
+		"name":               item.GetName(),
+		"namespace":          item.GetNamespace(),
+		"clusterName":        clusterName,
+		"phase":              phase,
+		"replicas":           replicas,
+		"readyReplicas":      readyReplicas,
+		"availableReplicas":  availableReplicas,
+		"createdAt":          item.GetCreationTimestamp(),
+	}
+}
+
+// ListMachines lấy và format danh sách Machines
+func (s *ClusterService) ListMachines(ctx context.Context, namespace string, clusterName string) ([]map[string]interface{}, error) {
+	items, err := s.repo.ListMachines(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		result = append(result, s.FormatMachine(&item))
+	}
+	return result, nil
+}
+
+// ListMachineDeployments lấy và format danh sách MachineDeployments
+func (s *ClusterService) ListMachineDeployments(ctx context.Context, namespace string, clusterName string) ([]map[string]interface{}, error) {
+	items, err := s.repo.ListMachineDeployments(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		result = append(result, s.FormatMachineDeployment(&item))
+	}
+	return result, nil
+}

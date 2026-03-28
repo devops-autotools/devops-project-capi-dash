@@ -8,17 +8,17 @@ import {
   Settings, 
   ShieldCheck, 
   Activity,
-  Layers
+  Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Workload Clusters', href: '/clusters', icon: Server },
-  { name: 'Infrastructure', href: '/infrastructure', icon: Layers },
-  { name: 'Security Groups', href: '/security', icon: ShieldCheck },
-  { name: 'System Logs', href: '/logs', icon: Activity },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard',          href: '/',              icon: LayoutDashboard },
+  { name: 'Workload Clusters',  href: '/clusters',      icon: Server },
+  { name: 'Infrastructure',     href: '/infrastructure',icon: Layers },
+  { name: 'Security Groups',    href: '/security',      icon: ShieldCheck },
+  { name: 'System Logs',        href: '/logs',          icon: Activity },
+  { name: 'Settings',           href: '/settings',      icon: Settings },
 ]
 
 export function Sidebar() {
