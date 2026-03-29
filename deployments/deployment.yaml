@@ -25,12 +25,6 @@ spec:
               containerPort: 8080
             - name: frontend
               containerPort: 3000
-          # Không cần PORT — backend mặc định :8080
-          # Không cần OS_* — K8s dùng InClusterConfig qua ServiceAccount
-          # Nếu muốn bật tính năng OpenStack Metadata API (optional):
-          # envFrom:
-          #   - secretRef:
-          #       name: openstack-creds
           resources:
             limits:
               cpu: 500m
@@ -68,9 +62,4 @@ spec:
       port: 8080
       targetPort: 8080
   type: NodePort
-  # Đổi thành NodePort nếu chưa có Ingress:
-  # type: NodePort
-  # ports:
-  #   - port: 80
-  #     targetPort: 3000
-  #     nodePort: 30080
+

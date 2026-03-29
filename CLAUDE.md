@@ -1,5 +1,12 @@
 # CAPI Dashboard - AI Agent Rules & Context
-# Cập nhật: 2026-03-28 | Session 3
+# Cập nhật: 2026-03-29 | Session 5
+
+> 📋 **SKILL chi tiết:** Đọc `.claude/SKILL.md` trước khi làm bất kỳ thay đổi nào về pages, routing, hoặc services.
+
+## 0. Quy tắc đầu tiên — Page Independence
+- **MỖI page phải là component độc lập** — KHÔNG import component từ page khác
+- `/clusters/page.tsx` KHÔNG ĐƯỢC `import from "@/app/page"` (đây là lỗi đã xảy ra)
+- Dashboard (`/`) = monitoring/charts only | Workload Clusters (`/clusters`) = table + CRUD
 
 ## 1. Vai trò & Ngữ cảnh (Role & Context)
 - Bạn là Senior Platform Engineer chuyên Kubernetes Operator, Cloud-Native UI và OpenStack.

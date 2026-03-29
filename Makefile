@@ -43,9 +43,23 @@ docker-build: ## Build Docker image
 	docker build -t capi-dashboard:latest .
 
 ## 🧪 Testing
-test: ## Run Backend tests
+test: ## Run all Backend unit tests
 	@echo "Running tests..."
-	go test -v ./internal/...
+	go test -v ./internal/... -count=1
+
+test-short: ## Run tests without verbose output
+	@echo "Running tests (short)..."
+	go test ./internal/... -count=1
+
+test-coverage: ## Run tests with coverage report
+	@echo "Running tests with coverage..."
+	go test ./internal/... -coverprofile=coverage.out -count=1
+	go tool cover -func=coverage.out
+	@rm -f coverage.out
+
+## 🚀 Build with tests (run tests before build)
+build-safe: test build ## Run tests then build — use before deploy
+	@echo "✅ Tests passed. Build complete."
 
 ## 🧹 Cleaning
 clean: ## Remove built binaries and temporary files

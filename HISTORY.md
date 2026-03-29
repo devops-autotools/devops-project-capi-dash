@@ -143,3 +143,38 @@
 ### ⏭️ Bước tiếp theo (Next Steps):
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
 2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.
+
+## 🟢 Session 5: Unit Tests & Monitoring Dashboard (2026-03-29)
+
+- **Unit Tests — 22 tests, tất cả PASS:**
+    - `internal/engine/render` — 9 tests, coverage **94.7%**:
+      TestRenderAllTemplates_Basic, Ordered, DefaultFunction, DefaultFunctionPreservesValue,
+      EmptyDir, InvalidTemplateSyntax, UnknownField, IgnoresNonTmplFiles, AllFields
+    - `internal/service` — 7 tests, coverage **100%** trên format functions:
+      TestFormatCluster_BasicFields, MissingStatusFields,
+      TestFormatMachine_BasicFields, FailureFields,
+      TestFormatMachineDeployment_BasicFields, UnhealthyReplicas
+    - `internal/controller` — 6 tests:
+      TestHealthEndpoint, CreateCluster_MissingRequiredFields, InvalidJSON,
+      DeleteCluster_MissingParams, GetCluster_RouteMatch, MachineRoutes_PathParams
+    - Repository layer: 0% — cần K8s cluster thật hoặc fake client để test (future work)
+
+- **Makefile — workflow deploy an toàn:**
+    - `make test` — chạy toàn bộ tests verbose
+    - `make test-short` — chạy tests không verbose
+    - `make test-coverage` — báo cáo coverage từng function
+    - `make build-safe` — chạy tests TRƯỚC khi build, block deploy nếu tests fail
+
+- **Dashboard Monitoring redesign:**
+    - Cài thêm `recharts` cho charts
+    - Donut chart phân bố phase, Bar chart CP/Infra readiness,
+      Area chart live event activity, Live event feed panel
+
+### 📍 Trạng thái hiện tại (Current Status):
+- **Tests:** 22/22 PASS, coverage engine ~95%, service format 100%
+- **Services:** Backend :8080 ✅ | Frontend :3000 ✅
+
+### ⏭️ Bước tiếp theo (Next Steps):
+1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
+2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.
+3. **Tăng test coverage** — Mock K8s fake client cho repository layer.
