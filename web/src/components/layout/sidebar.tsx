@@ -5,9 +5,8 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Server,
-  Settings,
   Activity,
-  Layers,
+  Info,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -15,7 +14,7 @@ const navigation = [
   { name: 'Dashboard',         href: '/',         icon: LayoutDashboard },
   { name: 'Workload Clusters', href: '/clusters', icon: Server          },
   { name: 'System Logs',       href: '/logs',     icon: Activity        },
-  { name: 'Settings',          href: '/settings', icon: Settings        },
+  { name: 'System Info',       href: '/settings', icon: Info            },
 ]
 
 export function Sidebar() {

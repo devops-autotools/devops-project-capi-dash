@@ -1,78 +1,191 @@
 "use client"
 
-import { Settings, User, Bell, Shield, Database, Save } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  Server, CheckCircle2, XCircle, RefreshCw,
+  Info, Cpu, Activity, GitBranch, Clock,
+} from "lucide-react"
+
+interface HealthStatus {
+  status: string
+}
+
+interface ComponentInfo {
+  name: string
+  namespace: string
+  status: string
+  ready: boolean
+}
+
+interface SystemInfo {
+  health: HealthStatus | null
+  capiComponents: ComponentInfo[]
+  clusterCount: number
+  loadedAt: string
+}
+
+function StatusBadge({ ready, label }: { ready: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+      ready ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+    }`}>
+      {ready ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+      {label}
+    </span>
+  )
+}
 
 export default function SettingsPage() {
+  const [info, setInfo]       = useState<SystemInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchInfo = async () => {
+    setLoading(true)
+    try {
+      const [healthRes, clustersRes, podsRes] = await Promise.all([
+        fetch("/api/v1/health"),
+        fetch("/api/v1/clusters"),
+        fetch("/api/v1/logs/pods"),
+      ])
+
+      const health     = healthRes.ok  ? await healthRes.json()   : null
+      const clusters   = clustersRes.ok ? await clustersRes.json() : []
+      const pods: any[] = podsRes.ok   ? await podsRes.json()     : []
+
+      // Group controller pods thành CAPI components
+      const componentMap: Record<string, ComponentInfo> = {}
+      for (const pod of pods) {
+        const key = pod.namespace
+        if (!componentMap[key]) {
+          componentMap[key] = {
+            name:      nsToName(pod.namespace),
+            namespace: pod.namespace,
+            status:    pod.status,
+            ready:     pod.status === "Running",
+          }
+        }
+        // Nếu bất kỳ pod nào không Running → component không ready
+        if (pod.status !== "Running") componentMap[key].ready = false
+      }
+
+      setInfo({
+        health,
+        capiComponents: Object.values(componentMap),
+        clusterCount:   clusters.length,
+        loadedAt:       new Date().toLocaleString(),
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchInfo() }, [])
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-slate-500 mt-1">Configure your dashboard preferences and system connection.</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">System Info</h1>
+          <p className="text-slate-500 mt-1">Runtime status of the CAPI Dashboard and Management Cluster.</p>
+        </div>
+        <button onClick={fetchInfo}
+          className="p-2 text-slate-500 hover:bg-white border rounded-lg transition-colors" title="Refresh">
+          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 space-y-1">
-          {[
-            { name: 'General', icon: Settings, active: true },
-            { name: 'Profile', icon: User, active: false },
-            { name: 'Notifications', icon: Bell, active: false },
-            { name: 'Security', icon: Shield, active: false },
-            { name: 'System', icon: Database, active: false },
-          ].map((item) => (
-            <button
-              key={item.name}
-              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${item.active ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-            >
-              <item.icon size={18} />
-              {item.name}
-            </button>
-          ))}
+      {loading && !info ? (
+        <div className="flex items-center justify-center py-24 text-slate-400">
+          <RefreshCw size={28} className="animate-spin mr-3" /> Loading system info...
         </div>
+      ) : (
+        <div className="space-y-6">
 
-        <div className="md:col-span-3 space-y-6">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold">General Configuration</h2>
-              <p className="text-sm text-slate-500">Manage basic dashboard settings.</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Dashboard Name</label>
-                <input 
-                  type="text" 
-                  className="w-full px-4 py-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                  defaultValue="VNPAY CAPI Dashboard"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Management Cluster URL</label>
-                <input 
-                  type="text" 
-                  className="w-full px-4 py-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                  defaultValue="https://kubernetes.default.svc"
-                  disabled
-                />
-                <p className="text-[10px] text-slate-400">Detected automatically from environment.</p>
-              </div>
-              <div className="flex items-center gap-4 py-2">
-                <div className="flex items-center h-5">
-                  <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" defaultChecked />
-                </div>
-                <div className="text-sm">
-                  <label className="font-medium text-slate-700">Enable Dark Mode (Beta)</label>
-                  <p className="text-slate-500">Switch between light and dark interface.</p>
-                </div>
+          {/* Row 1: Quick status cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="bg-blue-50 text-blue-600 p-3 rounded-lg"><Server size={22} /></div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Backend API</p>
+                <StatusBadge ready={info?.health?.status === "UP"} label={info?.health?.status ?? "Unknown"} />
               </div>
             </div>
-            <div className="p-6 bg-slate-50 border-t flex justify-end">
-              <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all">
-                <Save size={18} />
-                Save Changes
-              </button>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><GitBranch size={22} /></div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Workload Clusters</p>
+                <p className="text-2xl font-bold text-slate-900 mt-0.5">{info?.clusterCount ?? "—"}</p>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="bg-slate-100 text-slate-600 p-3 rounded-lg"><Clock size={22} /></div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Last Refreshed</p>
+                <p className="text-xs font-mono text-slate-700 mt-1">{info?.loadedAt ?? "—"}</p>
+              </div>
             </div>
           </div>
+
+          {/* Row 2: CAPI Components */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="px-6 py-4 border-b flex items-center gap-2">
+              <Activity size={16} className="text-blue-600" />
+              <h2 className="font-bold text-slate-800">CAPI Controller Components</h2>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {info?.capiComponents.length === 0 ? (
+                <div className="px-6 py-10 text-center text-slate-400 text-sm">
+                  No controller pods found. Check if CAPI is installed on the management cluster.
+                </div>
+              ) : info?.capiComponents.map(c => (
+                <div key={c.namespace} className="px-6 py-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-800">{c.name}</p>
+                    <p className="text-xs font-mono text-slate-400 mt-0.5">{c.namespace}</p>
+                  </div>
+                  <StatusBadge ready={c.ready} label={c.ready ? "Running" : c.status} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 3: About */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="px-6 py-4 border-b flex items-center gap-2">
+              <Info size={16} className="text-blue-600" />
+              <h2 className="font-bold text-slate-800">About</h2>
+            </div>
+            <div className="px-6 py-5 grid grid-cols-2 gap-y-4 text-sm">
+              {[
+                { label: "Project",      value: "CAPI Dashboard"              },
+                { label: "Version",      value: "v0.1.0"                      },
+                { label: "Tech Stack",   value: "Go / Gin + Next.js 16"       },
+                { label: "K8s Client",   value: "client-go dynamic client"    },
+                { label: "CAPI Version", value: "v1beta1"                     },
+                { label: "Provider",     value: "OpenStack (CAPO)"            },
+              ].map(row => (
+                <div key={row.label}>
+                  <p className="text-slate-400 text-xs uppercase font-semibold">{row.label}</p>
+                  <p className="text-slate-800 font-medium mt-0.5">{row.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
-      </div>
+      )}
     </div>
   )
+}
+
+// Helper: đổi namespace → tên thân thiện
+function nsToName(ns: string): string {
+  const map: Record<string, string> = {
+    "capi-system":                         "Cluster API (Core)",
+    "capo-system":                         "CAPO — OpenStack Provider",
+    "capi-kubeadm-bootstrap-system":       "Kubeadm Bootstrap",
+    "capi-kubeadm-control-plane-system":   "Kubeadm Control Plane",
+  }
+  return map[ns] ?? ns
 }

@@ -12,7 +12,7 @@
 | `/clusters/create` | `src/app/clusters/create/page.tsx` | Form tạo cluster mới |
 | `/clusters/[ns]/[name]` | `src/app/clusters/[namespace]/[name]/page.tsx` | Chi tiết cluster: tabs Overview / Machines / Conditions / YAML |
 | `/logs` | `src/app/logs/page.tsx` | Terminal log viewer cho CAPI controller pods |
-| `/settings` | `src/app/settings/page.tsx` | Cài đặt dashboard |
+| `/settings` | `src/app/settings/page.tsx` | **System Info** — backend health, CAPI component status, cluster count, about |
 
 > ❌ **Đã xóa:** `/infrastructure` và `/security` — không cần thiết, phụ thuộc OpenStack API riêng biệt
 > ❌ **Đã xóa:** `controller/openstack.go`, `repository/openstack.go`, dependency `gophercloud`
