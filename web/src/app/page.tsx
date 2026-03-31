@@ -49,8 +49,7 @@ export default function DashboardPage() {
 
   // Fetch node topology cho tất cả clusters
   const fetchNodeTopology = async (clusterList: Cluster[]) => {
-    const results: NodeTopology[] = []
-    await Promise.all(
+    const results = await Promise.all(
       clusterList.slice(0, 10).map(async (c) => {
         try {
           const [mRes, mdRes] = await Promise.all([
@@ -60,29 +59,22 @@ export default function DashboardPage() {
           const machines: any[] = mRes.ok  ? await mRes.json()  : []
           const mds: any[]      = mdRes.ok ? await mdRes.json() : []
 
-          // Worker = tổng replicas của MachineDeployments
+          // Worker = tổng desired replicas của tất cả MachineDeployments
           const workerCount = mds.reduce((sum: number, md: any) => sum + (md.replicas ?? 0), 0)
-          // Master = tổng machines - worker
+          // Master = machines không thuộc worker (machines.length - workerCount, min 0)
           const masterCount = Math.max(0, machines.length - workerCount)
 
-          results.push({
+          return {
             name:   c.name.length > 14 ? c.name.slice(0, 14) + "…" : c.name,
             Master: masterCount,
             Worker: workerCount,
-          })
+          }
         } catch {
-          results.push({ name: c.name, Master: 0, Worker: 0 })
+          return { name: c.name, Master: 0, Worker: 0 }
         }
       })
     )
-    // Giữ thứ tự theo clusterList
-    setNodeTopology(
-      clusterList.slice(0, 10).map(c => {
-        const label = c.name.length > 14 ? c.name.slice(0, 14) + "…" : c.name
-        return results.find(r => r.name === label || r.name.startsWith(c.name.slice(0, 10))) 
-          ?? { name: label, Master: 0, Worker: 0 }
-      })
-    )
+    setNodeTopology(results)
   }
 
   const fetchAll = async () => {
@@ -102,7 +94,8 @@ export default function DashboardPage() {
     const es = new EventSource("/api/v1/clusters/events")
     es.onopen  = () => setSseOk(true)
     es.onerror = () => setSseOk(false)
-    es.onmessage = (e) => {
+    // Backend dùng SSEvent("message", ...) → lắng nghe qua addEventListener
+    es.addEventListener("message", (e) => {
       const d = JSON.parse(e.data)
       setClusters(prev => {
         const idx = prev.findIndex(c => c.name === d.name && c.namespace === d.namespace)
@@ -116,7 +109,7 @@ export default function DashboardPage() {
         eventType: d.eventType,
         phase:     d.phase,
       }, ...prev].slice(0, 20))
-    }
+    })
     return () => es.close()
   }, [])
 

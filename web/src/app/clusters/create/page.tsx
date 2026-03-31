@@ -220,7 +220,7 @@ export default function CreateClusterPage() {
                     type="number" min="1" max="5"
                     className="w-full border rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
                     value={formData.cpReplicas}
-                    onChange={e => setFormData({...formData, cpReplicas: parseInt(e.target.value)})}
+                    onChange={e => setFormData({...formData, cpReplicas: parseInt(e.target.value) || 1})}
                   />
                 </div>
               </div>
@@ -243,7 +243,7 @@ export default function CreateClusterPage() {
                     type="number" min="1" max="100"
                     className="w-full border rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
                     value={formData.workerReplicas}
-                    onChange={e => setFormData({...formData, workerReplicas: parseInt(e.target.value)})}
+                    onChange={e => setFormData({...formData, workerReplicas: parseInt(e.target.value) || 1})}
                   />
                 </div>
               </div>

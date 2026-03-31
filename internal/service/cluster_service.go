@@ -124,7 +124,13 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, namespace, name stri
 // ListControllerPods liệt kê pods của các controllers
 func (s *ClusterService) ListControllerPods(ctx context.Context) ([]map[string]interface{}, error) {
 	// Kiểm tra các namespace phổ biến của CAPI
-	namespaces := []string{"capi-system", "capo-system", "capi-kubeadm-bootstrap-system", "capi-kubeadm-control-plane-system"}
+	namespaces := []string{
+		"capi-system",
+		"capo-system",
+		"caaph-system",
+		"capi-kubeadm-bootstrap-system",
+		"capi-kubeadm-control-plane-system",
+	}
 	
 	result := make([]map[string]interface{}, 0)
 	for _, ns := range namespaces {

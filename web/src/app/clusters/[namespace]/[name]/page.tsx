@@ -14,8 +14,7 @@ import {
   Server,
   Cpu,
   GitBranch,
-  AlertTriangle,
-  XCircle,
+  AlertTriangle, XCircle,
 } from "lucide-react"
 
 interface Condition {
@@ -94,7 +93,6 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
   const [mds, setMds]           = useState<MachineDeployment[]>([])
   const [loading, setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'machines' | 'conditions' | 'yaml'>('overview')
-  const [machineTab, setMachineTab] = useState<'machines' | 'deployments'>('machines')
 
   const fetchDetail = async () => {
     setLoading(true)
@@ -115,6 +113,13 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
   }
 
   useEffect(() => { fetchDetail() }, [namespace, name])
+
+  // Log "Provisioned" khi toàn bộ machines đã Running
+  useEffect(() => {
+    if (machines.length > 0 && machines.every(m => m.phase === "Running")) {
+      console.log(`✅ Cluster "${name}" — All ${machines.length} machine(s) Provisioned`)
+    }
+  }, [machines, name])
 
   if (loading && !cluster) {
     return (
@@ -232,96 +237,41 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
 
         {/* ── Machines ── */}
         {activeTab === 'machines' && (
-          <div className="space-y-4">
-            {/* Sub-tabs */}
-            <div className="flex gap-2">
-              <button onClick={() => setMachineTab('machines')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${machineTab === 'machines' ? 'bg-blue-600 text-white' : 'bg-white border text-slate-600 hover:bg-slate-50'}`}>
-                <Cpu size={14} /> Machines
-                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${machineTab === 'machines' ? 'bg-blue-500' : 'bg-slate-100 text-slate-600'}`}>{machines.length}</span>
-              </button>
-              <button onClick={() => setMachineTab('deployments')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${machineTab === 'deployments' ? 'bg-blue-600 text-white' : 'bg-white border text-slate-600 hover:bg-slate-50'}`}>
-                <GitBranch size={14} /> MachineDeployments
-                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${machineTab === 'deployments' ? 'bg-blue-500' : 'bg-slate-100 text-slate-600'}`}>{mds.length}</span>
-              </button>
-            </div>
-
-            {/* Machines table */}
-            {machineTab === 'machines' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 font-medium border-b">
-                    <tr>
-                      <th className="px-6 py-3">Machine</th>
-                      <th className="px-6 py-3">Phase</th>
-                      <th className="px-6 py-3">Node</th>
-                      <th className="px-6 py-3">Version</th>
-                      <th className="px-6 py-3 text-center">Bootstrap</th>
-                      <th className="px-6 py-3 text-center">Infra</th>
-                      <th className="px-6 py-3">Created</th>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500 font-medium border-b">
+                <tr>
+                  <th className="px-6 py-3">Machine</th>
+                  <th className="px-6 py-3">Phase</th>
+                  <th className="px-6 py-3">Node</th>
+                  <th className="px-6 py-3">Version</th>
+                  <th className="px-6 py-3 text-center">Bootstrap</th>
+                  <th className="px-6 py-3 text-center">Infra</th>
+                  <th className="px-6 py-3">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {machines.length === 0
+                  ? <tr><td colSpan={7} className="px-6 py-10 text-center text-slate-400">No machines found.</td></tr>
+                  : machines.map(m => (
+                    <tr key={m.name} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900">{m.name}
+                        {m.failureReason && <p className="text-xs text-rose-500 mt-0.5 flex items-center gap-1"><AlertTriangle size={10}/>{m.failureReason}</p>}
+                      </td>
+                      <td className="px-6 py-4"><PhaseBadge phase={m.phase} /></td>
+                      <td className="px-6 py-4 font-mono text-xs text-slate-600">{m.nodeName || <span className="text-slate-300">—</span>}</td>
+                      <td className="px-6 py-4 font-mono text-xs text-slate-600">{m.version || '—'}</td>
+                      <td className="px-6 py-4 text-center">
+                        {m.bootstrapReady ? <CheckCircle2 size={16} className="text-emerald-500 mx-auto"/> : <XCircle size={16} className="text-slate-300 mx-auto"/>}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {m.infrastructureReady ? <CheckCircle2 size={16} className="text-emerald-500 mx-auto"/> : <XCircle size={16} className="text-slate-300 mx-auto"/>}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-500">{new Date(m.createdAt).toLocaleString()}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {machines.length === 0
-                      ? <tr><td colSpan={7} className="px-6 py-10 text-center text-slate-400">No machines found.</td></tr>
-                      : machines.map(m => (
-                        <tr key={m.name} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-slate-900">{m.name}
-                            {m.failureReason && <p className="text-xs text-rose-500 mt-0.5 flex items-center gap-1"><AlertTriangle size={10}/>{m.failureReason}</p>}
-                          </td>
-                          <td className="px-6 py-4"><PhaseBadge phase={m.phase} /></td>
-                          <td className="px-6 py-4 font-mono text-xs text-slate-600">{m.nodeName || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-6 py-4 font-mono text-xs text-slate-600">{m.version || '—'}</td>
-                          <td className="px-6 py-4 text-center">
-                            {m.bootstrapReady ? <CheckCircle2 size={16} className="text-emerald-500 mx-auto"/> : <XCircle size={16} className="text-slate-300 mx-auto"/>}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {m.infrastructureReady ? <CheckCircle2 size={16} className="text-emerald-500 mx-auto"/> : <XCircle size={16} className="text-slate-300 mx-auto"/>}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-500">{new Date(m.createdAt).toLocaleString()}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* MachineDeployments table */}
-            {machineTab === 'deployments' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 font-medium border-b">
-                    <tr>
-                      <th className="px-6 py-3">Name</th>
-                      <th className="px-6 py-3">Phase</th>
-                      <th className="px-6 py-3">Replicas</th>
-                      <th className="px-6 py-3">Ready</th>
-                      <th className="px-6 py-3">Available</th>
-                      <th className="px-6 py-3">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {mds.length === 0
-                      ? <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-400">No machine deployments found.</td></tr>
-                      : mds.map(md => (
-                        <tr key={md.name} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-slate-900">{md.name}</td>
-                          <td className="px-6 py-4"><PhaseBadge phase={md.phase} /></td>
-                          <td className="px-6 py-4 font-bold">{md.replicas}</td>
-                          <td className="px-6 py-4 font-bold">
-                            <span className={md.readyReplicas === md.replicas ? 'text-emerald-600' : 'text-amber-600'}>{md.readyReplicas ?? 0}</span>
-                          </td>
-                          <td className="px-6 py-4 font-bold">
-                            <span className={md.availableReplicas === md.replicas ? 'text-emerald-600' : 'text-amber-600'}>{md.availableReplicas ?? 0}</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-500">{new Date(md.createdAt).toLocaleString()}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
