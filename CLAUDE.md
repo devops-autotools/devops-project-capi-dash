@@ -106,6 +106,11 @@ GET    /api/v1/clusters/:namespace/:name     # Get cluster detail + conditions +
 POST   /api/v1/clusters                      # Create workload cluster (render + apply 8 templates)
 DELETE /api/v1/clusters/:namespace/:name     # Delete cluster
 
+GET    /api/v1/clusters/:namespace/:name/machines               # Machines của cluster
+GET    /api/v1/clusters/:namespace/:name/machinedeployments     # MachineDeployments
+GET    /api/v1/clusters/:namespace/:name/machinesets            # MachineSets (replica health)
+GET    /api/v1/clusters/:namespace/:name/controlplane           # KubeadmControlPlane detail
+
 GET    /api/v1/logs/pods                     # List CAPI controller pods
 GET    /api/v1/logs/:namespace/:name         # Stream pod logs
 
@@ -160,5 +165,4 @@ cd web && npm run dev
 
 ## 10. Next Steps (Bước tiếp theo ưu tiên)
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex) cho multi-user.
-2. **Machine Health Check View** — Hiển thị chi tiết Node/Machine/MachineSet.
-3. **Helm Chart Production** — Hoàn thiện chart để deploy lên Management Cluster chính thức.
+2. **Helm Chart Production** — Hoàn thiện chart để deploy lên Management Cluster chính thức.

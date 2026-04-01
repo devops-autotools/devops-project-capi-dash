@@ -68,10 +68,15 @@ func main() {
 		v1.DELETE("/clusters/:namespace/:name",                     clusterCtrl.Delete)
 		v1.GET("/clusters/:namespace/:name/machines",               clusterCtrl.ListMachines)
 		v1.GET("/clusters/:namespace/:name/machinedeployments",     clusterCtrl.ListMachineDeployments)
+		v1.GET("/clusters/:namespace/:name/machinesets",            clusterCtrl.ListMachineSets)
+		v1.GET("/clusters/:namespace/:name/controlplane",           clusterCtrl.GetKubeadmControlPlane)
 
 		// Logs
 		v1.GET("/logs/pods",              clusterCtrl.ListPods)
 		v1.GET("/logs/:namespace/:name",  clusterCtrl.GetLogs)
+
+		// System tools check
+		v1.GET("/system/tools", controller.GetSystemTools)
 	}
 
 	slog.Info("🚀 CAPI Dashboard Backend starting", "port", port)

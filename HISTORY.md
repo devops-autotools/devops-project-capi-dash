@@ -178,3 +178,30 @@
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
 2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.
 3. **Tăng test coverage** — Mock K8s fake client cho repository layer.
+
+## 🟢 Session 6: Machine Health Check View (2026-04-01)
+
+- **Backend — 2 endpoints mới:**
+    - `GET /api/v1/clusters/:namespace/:name/machinesets` — List MachineSets theo cluster (desired/ready/available replicas + conditions)
+    - `GET /api/v1/clusters/:namespace/:name/controlplane` — Get KubeadmControlPlane chi tiết (version, replicas, initialized, ready, conditions)
+    - Thêm `ListMachineSets`, `GetKubeadmControlPlane` vào `K8sRepository`
+    - Thêm `FormatMachineSet`, `FormatKubeadmControlPlane`, `ListMachineSets`, `GetKubeadmControlPlane` vào `ClusterService`
+    - Thêm `ListMachineSets`, `GetKubeadmControlPlane` handlers vào `ClusterController`
+
+- **Frontend — Tab "Machine Health" trong Cluster Detail:**
+    - Đổi tên tab từ "Machines" → "Machine Health"
+    - 3 sub-tabs:
+      - **Machines** — bảng chi tiết machines với health summary cards (Total/Running/Provisioning/Failed), failure message inline
+      - **MachineSets** — bảng replica counts (Desired/Ready/Available/FullyLabeled) + conditions preview
+      - **Control Plane** — KCP status cards (version, replicas, ready, unavailable), initialized/ready badges, conditions table đầy đủ
+    - Overview tab thêm Node Summary card (Total/Running/Failed)
+
+- **Build + Tests:** BUILD OK | 22/22 tests PASS
+
+### 📍 Trạng thái hiện tại (Current Status):
+- **Machine Health Check:** Hoàn thành — Machines + MachineSets + KubeadmControlPlane health view
+- **API mới:** `/machinesets`, `/controlplane` scoped theo cluster
+
+### ⏭️ Bước tiếp theo (Next Steps):
+1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
+2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.

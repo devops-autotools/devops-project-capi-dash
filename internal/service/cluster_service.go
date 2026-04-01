@@ -242,3 +242,73 @@ func (s *ClusterService) ListMachineDeployments(ctx context.Context, namespace s
 	}
 	return result, nil
 }
+
+// FormatMachineSet biến MachineSet object thành map cho UI
+func (s *ClusterService) FormatMachineSet(item *unstructured.Unstructured) map[string]interface{} {
+	clusterName, _, _      := unstructured.NestedString(item.Object, "spec", "clusterName")
+	desiredReplicas, _, _  := unstructured.NestedInt64(item.Object, "spec", "replicas")
+	readyReplicas, _, _    := unstructured.NestedInt64(item.Object, "status", "readyReplicas")
+	availableReplicas, _, _:= unstructured.NestedInt64(item.Object, "status", "availableReplicas")
+	fullyLabeled, _, _     := unstructured.NestedInt64(item.Object, "status", "fullyLabeledReplicas")
+	conditions, _, _       := unstructured.NestedSlice(item.Object, "status", "conditions")
+
+	return map[string]interface{}{
+		"name":               item.GetName(),
+		"namespace":          item.GetNamespace(),
+		"clusterName":        clusterName,
+		"desiredReplicas":    desiredReplicas,
+		"readyReplicas":      readyReplicas,
+		"availableReplicas":  availableReplicas,
+		"fullyLabeledReplicas": fullyLabeled,
+		"conditions":         conditions,
+		"createdAt":          item.GetCreationTimestamp(),
+	}
+}
+
+// FormatKubeadmControlPlane biến KCP thành map cho UI
+func (s *ClusterService) FormatKubeadmControlPlane(item *unstructured.Unstructured) map[string]interface{} {
+	replicas, _, _        := unstructured.NestedInt64(item.Object, "spec", "replicas")
+	readyReplicas, _, _   := unstructured.NestedInt64(item.Object, "status", "readyReplicas")
+	updatedReplicas, _, _ := unstructured.NestedInt64(item.Object, "status", "updatedReplicas")
+	unavailable, _, _     := unstructured.NestedInt64(item.Object, "status", "unavailableReplicas")
+	initialized, _, _     := unstructured.NestedBool(item.Object, "status", "initialized")
+	ready, _, _           := unstructured.NestedBool(item.Object, "status", "ready")
+	version, _, _         := unstructured.NestedString(item.Object, "spec", "version")
+	conditions, _, _      := unstructured.NestedSlice(item.Object, "status", "conditions")
+
+	return map[string]interface{}{
+		"name":               item.GetName(),
+		"namespace":          item.GetNamespace(),
+		"version":            version,
+		"replicas":           replicas,
+		"readyReplicas":      readyReplicas,
+		"updatedReplicas":    updatedReplicas,
+		"unavailableReplicas": unavailable,
+		"initialized":        initialized,
+		"ready":              ready,
+		"conditions":         conditions,
+		"createdAt":          item.GetCreationTimestamp(),
+	}
+}
+
+// ListMachineSets lấy và format danh sách MachineSets
+func (s *ClusterService) ListMachineSets(ctx context.Context, namespace string, clusterName string) ([]map[string]interface{}, error) {
+	items, err := s.repo.ListMachineSets(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		result = append(result, s.FormatMachineSet(&item))
+	}
+	return result, nil
+}
+
+// GetKubeadmControlPlane lấy thông tin KCP
+func (s *ClusterService) GetKubeadmControlPlane(ctx context.Context, namespace, clusterName string) (map[string]interface{}, error) {
+	item, err := s.repo.GetKubeadmControlPlane(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+	return s.FormatKubeadmControlPlane(item), nil
+}

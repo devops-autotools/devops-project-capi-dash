@@ -166,3 +166,28 @@ func (ctrl *ClusterController) ListMachineDeployments(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, mds)
 }
+
+// ListMachineSets handles GET /api/v1/clusters/:namespace/:name/machinesets
+func (ctrl *ClusterController) ListMachineSets(c *gin.Context) {
+	namespace   := c.Param("namespace")
+	clusterName := c.Param("name")
+	mss, err := ctrl.Service.ListMachineSets(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, mss)
+}
+
+// GetKubeadmControlPlane handles GET /api/v1/clusters/:namespace/:name/controlplane
+func (ctrl *ClusterController) GetKubeadmControlPlane(c *gin.Context) {
+	namespace   := c.Param("namespace")
+	clusterName := c.Param("name")
+	kcp, err := ctrl.Service.GetKubeadmControlPlane(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		// KCP có thể không tồn tại — trả 404 thay vì 500
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, kcp)
+}

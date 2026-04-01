@@ -248,3 +248,47 @@ func (r *K8sRepository) ListMachineDeployments(ctx context.Context, namespace st
 	}
 	return list.Items, nil
 }
+
+// ListMachineSets lấy danh sách MachineSets trong namespace
+func (r *K8sRepository) ListMachineSets(ctx context.Context, namespace string, clusterName string) ([]unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "MachineSet",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{}
+	if clusterName != "" {
+		listOpts.LabelSelector = "cluster.x-k8s.io/cluster-name=" + clusterName
+	}
+
+	list, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(ctx, listOpts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+// GetKubeadmControlPlane lấy thông tin KubeadmControlPlane của cluster
+func (r *K8sRepository) GetKubeadmControlPlane(ctx context.Context, namespace, clusterName string) (*unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "controlplane.cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "KubeadmControlPlane",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	// KCP thường có cùng tên với cluster
+	obj, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).Get(ctx, clusterName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
