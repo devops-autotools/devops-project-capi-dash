@@ -2,6 +2,7 @@
 # Cập nhật: 2026-03-29 | Session 5
 
 > 📋 **SKILL chi tiết:** Đọc `.claude/SKILL.md` trước khi làm bất kỳ thay đổi nào về pages, routing, hoặc services.
+> 🧪 **SKILL Testing:** Đọc `.claude/SKILL-TESTING.md` khi thêm feature mới hoặc fix bug — phải có test case tương ứng.
 
 ## 0. Quy tắc đầu tiên — Page Independence
 - **MỖI page phải là component độc lập** — KHÔNG import component từ page khác

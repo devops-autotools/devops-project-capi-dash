@@ -6,6 +6,7 @@ import {
   Plus, Server, CheckCircle2, AlertCircle,
   Clock, RefreshCw, Trash2, ExternalLink, Search,
 } from "lucide-react"
+import { ToastContainer, useToast } from "@/components/ui/toast"
 
 interface Cluster {
   name: string
@@ -21,6 +22,7 @@ export default function ClustersPage() {
   const [error,    setError]    = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const { toasts, addToast, removeToast } = useToast()
 
   const fetchClusters = async () => {
     setLoading(true)
@@ -56,12 +58,14 @@ export default function ClustersPage() {
     setDeleting(`${namespace}/${name}`)
     try {
       const res = await fetch(`/api/v1/clusters/${namespace}/${name}`, { method: "DELETE" })
-      if (!res.ok) {
+      if (res.ok) {
+        addToast(`Cluster "${name}" deleted successfully`, "success")
+      } else {
         const err = await res.json()
-        alert(`Failed: ${err.error}`)
+        addToast(`Failed to delete "${name}": ${err.error}`, "error")
       }
     } catch {
-      alert("An error occurred")
+      addToast("An error occurred while deleting cluster", "error")
     } finally {
       setDeleting(null)
     }
@@ -92,6 +96,7 @@ export default function ClustersPage() {
   )
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -213,5 +218,7 @@ export default function ClustersPage() {
         </div>
       </div>
     </div>
+    <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   )
 }

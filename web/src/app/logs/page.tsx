@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { Terminal, RefreshCw, Search, ChevronRight, Download, Trash2, Activity } from "lucide-react"
+import { Terminal, RefreshCw, Search, ChevronRight, Trash2, Activity } from "lucide-react"
 
 interface Pod {
   name: string
@@ -37,6 +37,14 @@ export default function LogsPage() {
   }
 
   useEffect(() => { fetchPods() }, [])
+
+  // Auto-select pod đầu tiên thuộc capi-system khi pods load xong
+  useEffect(() => {
+    if (pods.length > 0 && !selectedPod) {
+      const capiPod = pods.find(p => p.namespace === "capi-system") ?? pods[0]
+      setSelectedPod(capiPod)
+    }
+  }, [pods])
   useEffect(() => { if (selectedPod) fetchLogs(selectedPod) }, [selectedPod])
   useEffect(() => {
     if (autoRefresh && selectedPod) {
@@ -151,15 +159,8 @@ export default function LogsPage() {
             className="flex-1 p-5 text-emerald-400 font-mono text-xs overflow-auto whitespace-pre-wrap leading-relaxed">
             {keyword && filteredLogs === ""
               ? <span className="text-slate-500">No lines matching "{keyword}"</span>
-              : filteredLogs || (selectedPod ? 'Fetching logs...' : 'Waiting for selection...')}
+              : filteredLogs || (selectedPod ? 'Fetching logs...' : 'Loading...')}
           </pre>
-
-          {!selectedPod && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 bg-slate-900/60 backdrop-blur-[1px] pointer-events-none">
-              <Activity size={40} className="mb-3 opacity-20" />
-              <p className="font-medium">Select a controller pod</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

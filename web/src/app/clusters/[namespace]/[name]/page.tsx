@@ -140,7 +140,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
 
   const tabs = [
     { key: 'overview',    label: 'Overview',    icon: Info },
-    { key: 'machines',    label: 'Machines',     icon: Cpu,      badge: machines.length + mds.length },
+    { key: 'machines',    label: 'Machines',     icon: Cpu,      badge: machines.length },
     { key: 'conditions',  label: 'Conditions',   icon: Activity },
     { key: 'yaml',        label: 'YAML',         icon: Code },
   ] as const

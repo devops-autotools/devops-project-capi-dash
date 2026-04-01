@@ -4,10 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Loader2, Info, Server, KeyRound, Network } from "lucide-react"
 import Link from "next/link"
+import { ToastContainer, useToast } from "@/components/ui/toast"
 
 export default function CreateClusterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { toasts, addToast, removeToast } = useToast()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -51,10 +53,11 @@ export default function CreateClusterPage() {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
-        router.push('/')
+        addToast(`Cluster "${formData.name}" creation initiated!`, "success")
+        setTimeout(() => router.push('/'), 1500)
       } else {
         const error = await res.json()
-        alert(`Failed to create cluster: ${error.error}`)
+        addToast(`Failed to create cluster: ${error.error}`, "error")
       }
     } catch (err) {
       alert("An error occurred")
@@ -268,6 +271,7 @@ export default function CreateClusterPage() {
           </button>
         </div>
       </form>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   )
 }

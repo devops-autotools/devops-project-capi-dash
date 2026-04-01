@@ -1,19 +1,8 @@
-import { Bell, Search, UserCircle } from "lucide-react"
+import { Bell, UserCircle } from "lucide-react"
 
 export function Header() {
   return (
-    <header className="h-16 border-b bg-white flex items-center justify-between px-8 sticky top-0 z-10">
-      <div className="flex items-center gap-4 w-1/3">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="search"
-            placeholder="Search clusters..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-md py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-          />
-        </div>
-      </div>
-
+    <header className="h-16 border-b bg-white flex items-center justify-end px-8 sticky top-0 z-10">
       <div className="flex items-center gap-4">
         <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-full relative">
           <Bell size={20} />
