@@ -182,13 +182,13 @@ export default function DashboardPage() {
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
                   paddingAngle={3} dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   labelLine={false}>
                   {pieData.map(entry => (
                     <Cell key={entry.name} fill={PHASE_COLOR[entry.name] ?? PHASE_COLOR.Unknown} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v} cluster(s)`, "Count"]} />
+                <Tooltip formatter={(v) => [`${v ?? 0} cluster(s)`, "Count"]} />
                 <Legend iconType="circle" iconSize={10} />
               </PieChart>
             </ResponsiveContainer>
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number, name: string) => [`${v} node(s)`, name]} />
+                <Tooltip formatter={(v, name) => [`${v ?? 0} node(s)`, name]} />
                 <Legend iconType="circle" iconSize={10} />
                 <Bar dataKey="Master" fill="#6366f1" radius={[4,4,0,0]} maxBarSize={36} />
                 <Bar dataKey="Worker" fill="#10b981" radius={[4,4,0,0]} maxBarSize={36} />

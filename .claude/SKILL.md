@@ -43,18 +43,25 @@ npm run dev
 - Backend port: **8080** | Frontend port: **3000**
 - Frontend proxy `/api/v1/*` → `localhost:8080` qua `next.config.mjs`
 
-## npm — Lưu ý quan trọng
+## npm — Lưu ý quan trọng ⚠️
 
 ```bash
-# LUÔN dùng --legacy-peer-deps (Next.js 16 + React 19 có peer dep conflict)
-npm install <package> --legacy-peer-deps
+# ROOT CAUSE BUG: NODE_ENV=production làm npm bỏ qua devDependencies
+# LUÔN unset NODE_ENV trước khi install
+unset NODE_ENV && npm install --legacy-peer-deps
 
-# Nếu node_modules bị hỏng sau install:
-rm -rf node_modules && npm install --legacy-peer-deps
+# Sau mỗi lần cài package mới, PHẢI verify đủ packages:
+ls node_modules/@tailwindcss/postcss && echo "✅ tailwind OK"
+ls node_modules/typescript && echo "✅ typescript OK"
 
-# Cài devDependencies riêng nếu mất:
-npm install --save-dev tailwindcss @tailwindcss/postcss --legacy-peer-deps
+# Nếu node_modules bị hỏng (thường thấy 67 packages thay vì ~400+):
+unset NODE_ENV && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
+
+# Dấu hiệu bị hỏng: npm list hiện < 100 packages thay vì ~400
+npm list --depth=0 | wc -l
 ```
+
+**Root cause đã gặp nhiều lần:** `NODE_ENV=production` trong shell environment → npm skip devDependencies → mất `@tailwindcss/postcss`, `tailwindcss`, `typescript`, etc.
 
 ## Trước khi Deploy
 
@@ -82,7 +89,32 @@ GET  /api/v1/logs/:ns/:name                        Pod logs
 GET  /api/v1/os/flavors|images|networks|security-groups
 ```
 
-## Khi thêm tính năng mới — Checklist
+## ✅ Checklist trước khi báo "Done"
+
+Sau mỗi thay đổi code hoặc fix lỗi, BẮT BUỘC verify theo thứ tự:
+
+```bash
+# 1. Backend compile + tests
+cd /home/thalt/vnpay/vnpay-project/sandbox/tools/capi-dashboard
+export PATH=$PATH:/usr/local/go/bin
+go build ./... && echo "BUILD OK"
+go test ./internal/... -count=1 && echo "TESTS OK"
+
+# 2. Frontend — check node_modules đủ (~400 packages)
+npm list --depth=0 2>/dev/null | wc -l   # phải > 100
+
+# 3. Start và đọc logs thực tế
+# Backend: check không có error khi start
+# Frontend: check page load 200, không có CSS/module error
+
+# 4. Verify API trả đúng
+curl -s http://localhost:8080/api/v1/health  # {"status":"UP"}
+```
+
+**KHÔNG báo done nếu:**
+- Chưa chạy `go build` thành công
+- Frontend còn lỗi trong console/terminal (đặc biệt CSS module errors)
+- Chưa verify API endpoint mới hoạt động
 
 - [ ] Backend: repo → service → controller → đăng ký route trong `main.go`
 - [ ] Frontend: tạo page mới độc lập (KHÔNG import từ page khác)

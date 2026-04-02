@@ -1,0 +1,30 @@
+# Node
+web/node_modules/
+web/.next/
+
+# Go build artifacts (vendor/ được giữ lại — cần cho Docker build)
+dashboard
+*.test
+coverage.out
+
+# Git
+.git/
+.github/
+
+# Logs & temp
+*.log
+*.tmp
+backend.log
+frontend.log
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+clouds.yaml
+*kubeconfig*
+
+# Editor
+.idea/
+.vscode/
+*.swp

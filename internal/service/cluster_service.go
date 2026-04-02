@@ -312,3 +312,8 @@ func (s *ClusterService) GetKubeadmControlPlane(ctx context.Context, namespace, 
 	}
 	return s.FormatKubeadmControlPlane(item), nil
 }
+
+// GetWorkloadKubeconfig expose lên service layer
+func (s *ClusterService) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {
+	return s.repo.GetWorkloadKubeconfig(ctx, namespace, clusterName)
+}

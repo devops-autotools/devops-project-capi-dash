@@ -52,6 +52,9 @@ func main() {
 	clusterSvc   := service.NewClusterService(engine, k8sRepo)
 	clusterCtrl  := controller.NewClusterController(clusterSvc)
 
+	// Inject service vào NodeShell handler
+	controller.NodeShellSvc = clusterSvc
+
 	// Router
 	r := gin.Default()
 	v1 := r.Group("/api/v1")
@@ -77,6 +80,8 @@ func main() {
 
 		// System tools check
 		v1.GET("/system/tools", controller.GetSystemTools)
+		// Node Shell via WebSocket
+		v1.GET("/clusters/:namespace/:name/machines/:node/shell", controller.NodeShellWS)
 	}
 
 	slog.Info("🚀 CAPI Dashboard Backend starting", "port", port)

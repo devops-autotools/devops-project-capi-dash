@@ -18,13 +18,11 @@ spec:
       serviceAccountName: capi-dashboard
       containers:
         - name: dashboard
-          image: vcr.infiniband.vn/thalt-test/capi-dash:v1
-          imagePullPolicy: IfNotPresent
+          image: vcr.infiniband.vn/thalt-test/capi-dash:v7
+          imagePullPolicy: Always
           ports:
-            - name: backend
-              containerPort: 8080
-            - name: frontend
-              containerPort: 3000
+            - name: http
+              containerPort: 80
           resources:
             limits:
               cpu: 500m
@@ -35,15 +33,17 @@ spec:
           readinessProbe:
             httpGet:
               path: /api/v1/health
-              port: 8080
-            initialDelaySeconds: 5
+              port: 80
+            initialDelaySeconds: 8
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/v1/health
-              port: 8080
-            initialDelaySeconds: 10
+              port: 80
+            initialDelaySeconds: 15
             periodSeconds: 30
+      imagePullSecrets:
+        - name: registry-auth
 ---
 apiVersion: v1
 kind: Service
@@ -53,13 +53,9 @@ metadata:
 spec:
   selector:
     app: capi-dashboard
-  ports:
-    - name: frontend
-      port: 3000
-      targetPort: 3000
-      nodePort: 30000
-    - name: backend
-      port: 8080
-      targetPort: 8080
   type: NodePort
-
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30000

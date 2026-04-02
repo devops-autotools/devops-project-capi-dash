@@ -292,3 +292,21 @@ func (r *K8sRepository) GetKubeadmControlPlane(ctx context.Context, namespace, c
 	}
 	return obj, nil
 }
+
+// GetWorkloadKubeconfig lấy kubeconfig của workload cluster từ CAPI Secret
+// CAPI tự tạo Secret "<cluster-name>-kubeconfig" trong namespace của cluster
+func (r *K8sRepository) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {
+	secretName := clusterName + "-kubeconfig"
+	secret, err := r.clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get kubeconfig secret %s/%s: %w", namespace, secretName, err)
+	}
+
+	// CAPI lưu kubeconfig dưới key "value"
+	kubeconfig, ok := secret.Data["value"]
+	if !ok || len(kubeconfig) == 0 {
+		return nil, fmt.Errorf("secret %s/%s missing 'value' key", namespace, secretName)
+	}
+
+	return kubeconfig, nil
+}
