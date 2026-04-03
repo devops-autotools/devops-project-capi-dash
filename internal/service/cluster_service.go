@@ -313,6 +313,40 @@ func (s *ClusterService) GetKubeadmControlPlane(ctx context.Context, namespace, 
 	return s.FormatKubeadmControlPlane(item), nil
 }
 
+// ListClusterEvents lấy và format Kubernetes Events của một cluster
+func (s *ClusterService) ListClusterEvents(ctx context.Context, namespace, clusterName string) ([]map[string]interface{}, error) {
+	events, err := s.repo.ListClusterEvents(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(events))
+	for _, e := range events {
+		lastTime := e.LastTimestamp.Time
+		if lastTime.IsZero() {
+			lastTime = e.EventTime.Time
+		}
+		result = append(result, map[string]interface{}{
+			"name":           e.Name,
+			"reason":         e.Reason,
+			"message":        e.Message,
+			"type":           e.Type, // Normal | Warning
+			"component":      e.Source.Component,
+			"involvedObject": e.InvolvedObject.Kind + "/" + e.InvolvedObject.Name,
+			"count":          e.Count,
+			"firstTime":      e.FirstTimestamp.Time,
+			"lastTime":       lastTime,
+		})
+	}
+
+	// Sắp xếp mới nhất lên trước
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
+	}
+
+	return result, nil
+}
+
 // GetWorkloadKubeconfig expose lên service layer
 func (s *ClusterService) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {
 	return s.repo.GetWorkloadKubeconfig(ctx, namespace, clusterName)

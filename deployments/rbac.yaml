@@ -10,7 +10,7 @@ metadata:
   name: capi-dashboard-role
 rules:
   - apiGroups: ["cluster.x-k8s.io"]
-    resources: ["clusters", "machinedeployments", "machines"]
+    resources: ["clusters", "machinedeployments", "machines", "machinesets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["infrastructure.cluster.x-k8s.io"]
     resources: ["openstackclusters", "openstackmachinetemplates"]
@@ -22,7 +22,7 @@ rules:
     resources: ["kubeadmconfigtemplates"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["secrets", "pods", "pods/log", "namespaces"]
+    resources: ["secrets", "pods", "pods/log", "namespaces", "events"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchAll()
-    const es = new EventSource("/api/v1/clusters/events")
+    const es = new EventSource("/api/v1/clusters/watch")
     es.onopen  = () => setSseOk(true)
     es.onerror = () => setSseOk(false)
     // Backend dùng SSEvent("message", ...) → lắng nghe qua addEventListener

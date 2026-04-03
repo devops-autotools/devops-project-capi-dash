@@ -179,6 +179,18 @@ func (ctrl *ClusterController) ListMachineSets(c *gin.Context) {
 	c.JSON(http.StatusOK, mss)
 }
 
+// ListClusterEvents handles GET /api/v1/clusters/:namespace/:name/events
+func (ctrl *ClusterController) ListClusterEvents(c *gin.Context) {
+	namespace   := c.Param("namespace")
+	clusterName := c.Param("name")
+	events, err := ctrl.Service.ListClusterEvents(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, events)
+}
+
 // GetKubeadmControlPlane handles GET /api/v1/clusters/:namespace/:name/controlplane
 func (ctrl *ClusterController) GetKubeadmControlPlane(c *gin.Context) {
 	namespace   := c.Param("namespace")

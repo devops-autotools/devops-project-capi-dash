@@ -65,7 +65,7 @@ func main() {
 
 		// Clusters
 		v1.GET("/clusters",                                         clusterCtrl.List)
-		v1.GET("/clusters/events",                                  clusterCtrl.Events)
+		v1.GET("/clusters/watch",                                   clusterCtrl.Events)
 		v1.GET("/clusters/:namespace/:name",                        clusterCtrl.Get)
 		v1.POST("/clusters",                                        clusterCtrl.Create)
 		v1.DELETE("/clusters/:namespace/:name",                     clusterCtrl.Delete)
@@ -73,6 +73,7 @@ func main() {
 		v1.GET("/clusters/:namespace/:name/machinedeployments",     clusterCtrl.ListMachineDeployments)
 		v1.GET("/clusters/:namespace/:name/machinesets",            clusterCtrl.ListMachineSets)
 		v1.GET("/clusters/:namespace/:name/controlplane",           clusterCtrl.GetKubeadmControlPlane)
+		v1.GET("/clusters/:namespace/:name/events",                 clusterCtrl.ListClusterEvents)
 
 		// Logs
 		v1.GET("/logs/pods",              clusterCtrl.ListPods)

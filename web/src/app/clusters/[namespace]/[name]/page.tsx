@@ -5,12 +5,16 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import {
   ArrowLeft, RefreshCw, CheckCircle2, Clock, AlertCircle,
-  Activity, Code, Info, Server, Cpu, AlertTriangle, XCircle, Terminal,
+  Activity, Code, Info, Server, Cpu, AlertTriangle, XCircle, Terminal, Radio,
 } from "lucide-react"
 
 const NodeTerminal = dynamic(() => import("@/components/ui/NodeTerminal"), { ssr: false })
 
 interface Condition { type: string; status: string; reason?: string; message?: string; lastTransitionTime: string }
+interface ClusterEvent {
+  name: string; reason: string; message: string; type: string
+  component: string; involvedObject: string; count: number; firstTime: string; lastTime: string
+}
 interface ClusterDetail {
   name: string; namespace: string; phase: string; status: string
   infrastructure: string; controlPlaneReady: boolean; infrastructureReady: boolean
@@ -54,19 +58,22 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
   const { namespace, name } = use(params)
   const [cluster,   setCluster]  = useState<ClusterDetail | null>(null)
   const [machines,  setMachines] = useState<Machine[]>([])
+  const [events,    setEvents]   = useState<ClusterEvent[]>([])
   const [loading,   setLoading]  = useState(true)
-  const [activeTab, setActiveTab]= useState<'overview'|'machines'|'conditions'|'yaml'>('overview')
+  const [activeTab, setActiveTab]= useState<'overview'|'machines'|'conditions'|'events'|'yaml'>('overview')
   const [shellNode, setShellNode]= useState<Machine | null>(null)
 
   const fetchDetail = useCallback(async () => {
     setLoading(true)
     try {
-      const [cRes, mRes] = await Promise.all([
+      const [cRes, mRes, eRes] = await Promise.all([
         fetch(`/api/v1/clusters/${namespace}/${name}`),
         fetch(`/api/v1/clusters/${namespace}/${name}/machines`),
+        fetch(`/api/v1/clusters/${namespace}/${name}/events`),
       ])
       if (cRes.ok) setCluster(await cRes.json())
       if (mRes.ok) setMachines(await mRes.json())
+      if (eRes.ok) setEvents(await eRes.json())
     } catch (err) { console.error(err) } finally { setLoading(false) }
   }, [namespace, name])
 
@@ -81,10 +88,12 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
 
   const runningMachines = machines.filter(m => m.phase === "Running").length
   const failedMachines  = machines.filter(m => m.phase === "Failed").length
+  const warningCount = events.filter(e => e.type === "Warning").length
   const tabs = [
     { key: 'overview',   label: 'Overview',   icon: Info },
     { key: 'machines',   label: 'Machines',   icon: Cpu,     badge: machines.length },
     { key: 'conditions', label: 'Conditions', icon: Activity },
+    { key: 'events',     label: 'Events',     icon: Radio,   badge: warningCount > 0 ? warningCount : undefined, badgeColor: 'bg-amber-100 text-amber-700' },
     { key: 'yaml',       label: 'YAML',       icon: Code },
   ] as const
 
@@ -124,7 +133,11 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
             className={`px-6 py-3 font-medium text-sm border-b-2 -mb-px flex items-center gap-2 transition-colors ${
               activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
             <tab.icon size={16}/>{tab.label}
-            {'badge' in tab && tab.badge > 0 && <span className="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{tab.badge}</span>}
+            {'badge' in tab && tab.badge !== undefined && tab.badge > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-bold ${'badgeColor' in tab ? tab.badgeColor : 'bg-slate-100 text-slate-600'}`}>
+                {tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -252,6 +265,53 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
                 {!cluster.conditions?.length && <tr><td colSpan={4} className="px-6 py-10 text-center text-slate-400">No conditions reported yet.</td></tr>}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Events Timeline */}
+        {activeTab === 'events' && (
+          <div className="space-y-3">
+            {events.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-16 text-center">
+                <Radio size={32} className="mx-auto text-slate-300 mb-3"/>
+                <p className="text-slate-400 font-medium">No events recorded for this cluster.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b bg-slate-50 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">{events.length} event(s)</span>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Warning: {warningCount}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-300 inline-block"/>Normal: {events.length - warningCount}</span>
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {events.map((e: ClusterEvent, i: number) => (
+                    <div key={i} className={`flex gap-4 px-6 py-4 hover:bg-slate-50 transition-colors ${e.type === 'Warning' ? 'border-l-4 border-amber-400' : 'border-l-4 border-slate-200'}`}>
+                      <div className="mt-0.5 shrink-0">
+                        {e.type === 'Warning'
+                          ? <AlertTriangle size={16} className="text-amber-500"/>
+                          : <CheckCircle2 size={16} className="text-slate-400"/>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${e.type === 'Warning' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {e.reason}
+                          </span>
+                          {e.involvedObject && <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{e.involvedObject}</span>}
+                          {e.component && <span className="text-xs text-slate-400">{e.component}</span>}
+                          {e.count > 1 && <span className="text-xs text-slate-400">×{e.count}</span>}
+                        </div>
+                        <p className="text-sm text-slate-700 mt-1 leading-snug">{e.message}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs text-slate-500 whitespace-nowrap">{new Date(e.lastTime).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

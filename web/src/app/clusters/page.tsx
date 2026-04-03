@@ -40,7 +40,7 @@ export default function ClustersPage() {
 
   useEffect(() => {
     fetchClusters()
-    const es = new EventSource("/api/v1/clusters/events")
+    const es = new EventSource("/api/v1/clusters/watch")
     es.onmessage = (e) => {
       const d = JSON.parse(e.data)
       setClusters(prev => {

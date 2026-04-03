@@ -293,6 +293,30 @@ func (r *K8sRepository) GetKubeadmControlPlane(ctx context.Context, namespace, c
 	return obj, nil
 }
 
+// ListClusterEvents lấy Kubernetes Events của tất cả CAPI objects thuộc cluster.
+// CAPI objects (Machine, MachineDeployment, KubeadmControlPlane...) đều được đặt tên
+// dạng "<cluster-name>" hoặc "<cluster-name>-*", nên filter bằng prefix sau khi list.
+func (r *K8sRepository) ListClusterEvents(ctx context.Context, namespace, clusterName string) ([]corev1.Event, error) {
+	list, err := r.clientset.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list events in namespace %s: %w", namespace, err)
+	}
+
+	slog.Info("ListClusterEvents: total events in namespace", "namespace", namespace, "total", len(list.Items))
+
+	prefix := clusterName + "-"
+	filtered := make([]corev1.Event, 0)
+	for _, e := range list.Items {
+		n := e.InvolvedObject.Name
+		if n == clusterName || (len(n) >= len(prefix) && n[:len(prefix)] == prefix) {
+			filtered = append(filtered, e)
+		}
+	}
+
+	slog.Info("ListClusterEvents: filtered events", "cluster", clusterName, "matched", len(filtered))
+	return filtered, nil
+}
+
 // GetWorkloadKubeconfig lấy kubeconfig của workload cluster từ CAPI Secret
 // CAPI tự tạo Secret "<cluster-name>-kubeconfig" trong namespace của cluster
 func (r *K8sRepository) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {
