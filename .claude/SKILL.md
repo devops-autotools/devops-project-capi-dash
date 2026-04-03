@@ -39,7 +39,7 @@ npm run dev
 ```
 
 - Go binary: `/usr/local/go/bin/go`
-- Node.js: nvm tại `~/.nvm/versions/node/v24.13.0/`
+- Node.js: quản lý qua nvm (`export NVM_DIR="$HOME/.nvm" && source $NVM_DIR/nvm.sh`)
 - Backend port: **8080** | Frontend port: **3000**
 - Frontend proxy `/api/v1/*` → `localhost:8080` qua `next.config.mjs`
 
@@ -77,17 +77,26 @@ make test-coverage
 ## API Endpoints
 
 ```
-GET  /api/v1/clusters                              List clusters
-GET  /api/v1/clusters/events                       SSE stream
-GET  /api/v1/clusters/:ns/:name                    Cluster detail
-POST /api/v1/clusters                              Create cluster
-DEL  /api/v1/clusters/:ns/:name                    Delete cluster
-GET  /api/v1/clusters/:ns/:name/machines           Machines của cluster
-GET  /api/v1/clusters/:ns/:name/machinedeployments MachineDeployments
-GET  /api/v1/logs/pods                             Controller pods
-GET  /api/v1/logs/:ns/:name                        Pod logs
-GET  /api/v1/os/flavors|images|networks|security-groups
+GET    /api/v1/health                                              Backend health check
+GET    /api/v1/clusters                                            List clusters
+GET    /api/v1/clusters/events                                     SSE stream (real-time)
+GET    /api/v1/clusters/:ns/:name                                  Cluster detail
+POST   /api/v1/clusters                                            Create cluster
+DELETE /api/v1/clusters/:ns/:name                                  Delete cluster
+
+GET    /api/v1/clusters/:ns/:name/machines                         Machines của cluster
+GET    /api/v1/clusters/:ns/:name/machinedeployments               MachineDeployments
+GET    /api/v1/clusters/:ns/:name/machinesets                      MachineSets
+GET    /api/v1/clusters/:ns/:name/controlplane                     KubeadmControlPlane
+WS     /api/v1/clusters/:ns/:name/machines/:node/shell             Node Shell PTY (WebSocket)
+
+GET    /api/v1/logs/pods                                           Controller pods trong capi-system
+GET    /api/v1/logs/:ns/:name                                      Pod logs (SSE)
+
+GET    /api/v1/system/tools                                        Kiểm tra kubectl-node_shell có sẵn không
 ```
+
+> ❌ **Đã xóa:** `/api/v1/os/flavors`, `/api/v1/os/images`, `/api/v1/os/networks`, `/api/v1/os/security-groups` — cùng với `gophercloud` dependency
 
 ## ✅ Checklist trước khi báo "Done"
 
@@ -97,8 +106,8 @@ Sau mỗi thay đổi code hoặc fix lỗi, BẮT BUỘC verify theo thứ tự
 # 1. Backend compile + tests
 cd /home/thalt/vnpay/vnpay-project/sandbox/tools/capi-dashboard
 export PATH=$PATH:/usr/local/go/bin
-go build ./... && echo "BUILD OK"
-go test ./internal/... -count=1 && echo "TESTS OK"
+go build -mod=vendor ./... && echo "BUILD OK"
+go test -mod=vendor ./internal/... -count=1 && echo "TESTS OK"
 
 # 2. Frontend — check node_modules đủ (~400 packages)
 npm list --depth=0 2>/dev/null | wc -l   # phải > 100

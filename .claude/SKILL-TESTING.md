@@ -134,3 +134,24 @@ make build-safe        # test + build — dùng trước deploy
 3. **Expected:** Table filter realtime, hiện counter "X / Y clusters"
 4. Gõ sai tên → **Expected:** "No clusters matching..."
 5. Click ✕ → **Expected:** Reset về full list
+
+### TC-11: Node Shell Terminal
+1. Vào `/clusters/:ns/:name` → tab **Machines**
+2. Click icon terminal trên một node đang Running
+3. **Expected:** xterm.js panel mở ra, kết nối WebSocket thành công
+4. Gõ `hostname` → **Expected:** trả về tên node đúng
+5. Resize browser window → **Expected:** terminal resize theo (không bị layout vỡ)
+6. Close terminal → **Expected:** WebSocket disconnect, không có zombie process
+
+### TC-12: Machine Health Check
+1. Vào `/clusters/:ns/:name` → tab **Machines**
+2. **Expected:** Mỗi machine hiển thị badge health status đúng (Healthy / Unhealthy / Unknown)
+3. **Expected:** Không có badge nào bị "undefined" hoặc crash
+4. Nếu cluster không có MachineHealthCheck → **Expected:** UI vẫn load bình thường, không báo lỗi
+
+### TC-13: Settings Page — System Info
+1. Vào `/settings`
+2. **Expected:** Backend health hiển thị "UP" (xanh)
+3. **Expected:** CAPI component status load được (không blank)
+4. **Expected:** Cluster count khớp với số cluster thật ở `/clusters`
+5. Tắt backend → **Expected:** Health indicator chuyển sang đỏ, không crash trang

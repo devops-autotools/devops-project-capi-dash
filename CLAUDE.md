@@ -20,7 +20,7 @@
 - Framework: Gin | K8s Client: `client-go` dynamic + `controller-runtime` REST mapper
 - Logging: `log/slog` JSON — KHÔNG `log.Printf`
 - Entry point: `cmd/dashboard/main.go`, port `8080`
-- Go version: 1.23+
+- Go version: 1.25+
 
 ### Frontend (Next.js):
 - Next.js 16+ App Router, TypeScript strict, Tailwind CSS v4, Lucide React
