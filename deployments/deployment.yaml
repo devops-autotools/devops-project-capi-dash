@@ -18,7 +18,7 @@ spec:
       serviceAccountName: capi-dashboard
       containers:
         - name: dashboard
-          image: vcr.infiniband.vn/thalt-test/capi-dash:v7
+          image: vcr.infiniband.vn/thalt-test/capi-dash:v8
           imagePullPolicy: Always
           ports:
             - name: http
