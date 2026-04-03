@@ -1,5 +1,5 @@
 # CAPI Dashboard - AI Agent Rules & Context
-# Cập nhật: 2026-03-29 | Session 5
+# Cập nhật: 2026-04-03 | Session 7
 
 > 📋 **SKILL chi tiết:** Đọc `.claude/SKILL.md` trước khi làm bất kỳ thay đổi nào về pages, routing, hoặc services.
 > 🧪 **SKILL Testing:** Đọc `.claude/SKILL-TESTING.md` khi thêm feature mới hoặc fix bug — phải có test case tương ứng.
@@ -9,160 +9,121 @@
 - `/clusters/page.tsx` KHÔNG ĐƯỢC `import from "@/app/page"` (đây là lỗi đã xảy ra)
 - Dashboard (`/`) = monitoring/charts only | Workload Clusters (`/clusters`) = table + CRUD
 
-## 1. Vai trò & Ngữ cảnh (Role & Context)
-- Bạn là Senior Platform Engineer chuyên Kubernetes Operator, Cloud-Native UI và OpenStack.
+## 1. Vai trò & Ngữ cảnh
+- Senior Platform Engineer chuyên Kubernetes Operator, Cloud-Native UI và OpenStack.
 - Dự án: "CAPI Dashboard" — Giao diện quản trị tập trung cho Cluster API (CAPI) trên Management Cluster.
-- Đối tượng sử dụng: DevOps/SRE Admin quản lý workload clusters trên OpenStack.
-- Infrastructure provider: **OpenStack** (CAPO — Cluster API Provider OpenStack).
-- Management Cluster thực tế: `lab-thalt-01` (kubeconfig tại `~/.kube/config`).
+- Đối tượng: DevOps/SRE Admin quản lý workload clusters trên OpenStack.
+- Infrastructure provider: **OpenStack** (CAPO). Management Cluster: `lab-thalt-01`.
 
-## 2. Tech Stack (Bắt buộc tuân thủ)
+## 2. Tech Stack
 ### Backend (Go):
-- **Framework:** Gin Web Framework (`github.com/gin-gonic/gin`)
-- **K8s Client:** `client-go` dynamic client + `controller-runtime` REST mapper
-- **OpenStack:** Gophercloud (`github.com/gophercloud/gophercloud`)
-- **Logging:** Structured Logging với `log/slog` (JSON format) — KHÔNG dùng `log.Printf`
-- **Entry point:** `cmd/dashboard/main.go`, port mặc định `8080`
-- **Go version:** 1.23+
+- Framework: Gin | K8s Client: `client-go` dynamic + `controller-runtime` REST mapper
+- Logging: `log/slog` JSON — KHÔNG `log.Printf`
+- Entry point: `cmd/dashboard/main.go`, port `8080`
+- Go version: 1.23+
 
 ### Frontend (Next.js):
-- **Framework:** Next.js 16+ với App Router, TypeScript strict
-- **Styling:** Tailwind CSS v4
-- **Icons:** Lucide React — KHÔNG dùng icon library khác
-- **UI Components:** Thuần Tailwind — chưa tích hợp Shadcn/UI
-- **Proxy:** `/api/v1/*` → `http://localhost:8080/api/v1/*` (cấu hình trong `next.config.mjs`)
-- **Port dev:** `3000`
+- Next.js 16+ App Router, TypeScript strict, Tailwind CSS v4, Lucide React
+- WebSocket terminal: `xterm` + `xterm-addon-fit` + `creack/pty` (backend)
+- Dev proxy: `/api/v1/*` → `http://localhost:8080`
 
-### Infrastructure:
-- **Template Engine:** Go `text/template` với custom `FuncMap` (có hàm `default`)
-- **YAML Templates:** 8 file `.tmpl` tại `internal/assets/templates/openstack/`
-- **Deploy:** Docker multi-stage build, K8s manifests tại `deployments/`
+### Production (Docker/K8s):
+- **nginx** — single port 80, proxy HTTP + WebSocket upgrade tới backend :8080 và frontend :3000
+- `go mod vendor` — build không cần internet (`-mod=vendor`)
+- K8s: NodePort 30000 → 80
+- Docker image: `node:20-alpine` + nginx + tini + kubectl + kubectl-node_shell
 
-## 3. Kiến trúc & Cấu trúc thư mục
+## 3. Cấu trúc thư mục
 ```
 capi-dashboard/
-├── cmd/dashboard/main.go          # Entry point, wire dependencies
+├── cmd/dashboard/main.go
 ├── internal/
-│   ├── controller/                # HTTP handlers (Gin) — KHÔNG chứa business logic
-│   │   ├── cluster.go             # CRUD + SSE stream cho clusters
-│   │   └── openstack.go           # Metadata endpoints (flavors/images/networks/sg)
-│   ├── service/
-│   │   └── cluster_service.go     # Business logic, orchestration
-│   ├── repository/
-│   │   ├── k8s.go                 # Dynamic client — apply/list/watch/delete CAPI CRDs
-│   │   └── openstack.go           # Gophercloud — list flavors/images/networks/secgroups
-│   ├── engine/render/
-│   │   └── render.go              # TemplateEngine với custom FuncMap (hàm default)
-│   ├── models/
-│   │   └── cluster.go             # ClusterConfig struct — map 1:1 với form frontend
-│   └── assets/templates/openstack/
-│       ├── 1-secret-authen-openstack.yaml.tmpl
-│       ├── 2-cluster.yaml.tmpl
-│       ├── 3-infrastructure.yaml.tmpl
-│       ├── 4-controlplane.yaml.tmpl
-│       ├── 5-bootstrap.yaml.tmpl
-│       ├── 6-KubeadmControlPlane-md.yaml.tmpl
-│       ├── 7-workernode-md.yaml.tmpl
-│       └── 8.MachineDeployment.yaml.tmpl
+│   ├── controller/cluster.go      # CRUD + SSE + Machine handlers
+│   ├── controller/system.go       # NodeShellWS (PTY WebSocket) + GetSystemTools
+│   ├── service/cluster_service.go # Business logic + GetWorkloadKubeconfig
+│   ├── repository/k8s.go          # K8s dynamic client + GetWorkloadKubeconfig
+│   ├── engine/render/render.go    # Go text/template engine
+│   └── models/cluster.go          # ClusterConfig struct
+├── nginx.conf                     # Reverse proxy config (HTTP + WS)
+├── Dockerfile                     # Multi-stage: node builder + go builder + final
+├── deployments/
+│   ├── deployment.yaml            # K8s Deployment + Service (port 80)
+│   └── rbac.yaml                  # ServiceAccount + ClusterRole + Binding
 └── web/src/
-    ├── app/                       # Next.js App Router pages
-    └── components/layout/         # Sidebar + Header
+    ├── app/                       # Next.js pages
+    └── components/ui/NodeTerminal.tsx  # xterm.js WebSocket terminal
 ```
 
-## 4. Quy tắc lập trình (Coding Standards)
+## 4. Quy tắc lập trình
 ### Backend (Go):
-- Luôn dùng `internal/` — không expose package ra ngoài.
-- Error handling tường minh: KHÔNG nuốt lỗi, KHÔNG dùng `_` cho error.
-- Logging: `slog.Info(...)`, `slog.Error(...)`, `slog.Warn(...)` — KHÔNG `fmt.Println`.
-- CAPI API Groups cần nhớ:
-  - Clusters: `cluster.x-k8s.io/v1beta1`
-  - ControlPlane: `controlplane.cluster.x-k8s.io/v1beta1`
-  - Infrastructure: `infrastructure.cluster.x-k8s.io/v1beta1`
-  - Bootstrap: `bootstrap.cluster.x-k8s.io/v1beta1`
+- Error handling tường minh — KHÔNG nuốt lỗi
+- CAPI API Groups: Clusters `cluster.x-k8s.io/v1beta1` | CP `controlplane.cluster.x-k8s.io/v1beta1`
+- Node Shell: dùng `creack/pty` (PTY thật) + **clean env** (bỏ KUBERNETES_SERVICE_HOST/PORT)
+- CAPI Secret convention: `<cluster>-kubeconfig` trong namespace workload
 
-### Template Engine (Go text/template):
-- **QUAN TRỌNG:** Go `text/template` KHÔNG có hàm `default` built-in (khác Helm/Sprig).
-- Custom `FuncMap` đã được đăng ký trong `render.go` — dùng `{{ .Field | default "value" }}` bình thường.
-- Khi thêm field mới vào template `.tmpl`, BẮT BUỘC thêm field tương ứng vào `models.ClusterConfig`.
-- Khi thêm template function mới, thêm vào `funcMap` trong `render.go`.
+### Frontend:
+- `"use client"` directive — không dùng Server Components cho data fetch
+- WebSocket URL: `window.location.host` — KHÔNG hardcode port
+- Resize terminal: gửi `{"type":"resize","cols":N,"rows":N}` qua WebSocket
 
-### Frontend (Next.js/TypeScript):
-- Tất cả pages dùng `"use client"` directive (không dùng Server Components cho data fetching).
-- Fetch API trực tiếp — không dùng SWR hay React Query.
-- Status Badge màu sắc bắt buộc:
-  - `Provisioned` → `bg-emerald-100 text-emerald-800`
-  - `Provisioning` / `Scaling` → `bg-blue-100 text-blue-800`
-  - `Deleting` → `bg-amber-100 text-amber-800`
-  - `Failed` / Error → `bg-rose-100 text-rose-800`
-- SSE (Server-Sent Events) cho real-time: dùng `EventSource` tại `/api/v1/clusters/events`.
-- Base64 encoding cho secrets: dùng `btoa(unescape(encodeURIComponent(rawString)))` — hỗ trợ UTF-8.
-
-## 5. API Endpoints (Backend)
+## 5. API Endpoints
 ```
-GET    /api/v1/health                        # Health check
-GET    /api/v1/clusters?namespace=<ns>       # List CAPI Clusters
-GET    /api/v1/clusters/events?namespace=<ns># SSE stream (watch)
-GET    /api/v1/clusters/:namespace/:name     # Get cluster detail + conditions + raw YAML
-POST   /api/v1/clusters                      # Create workload cluster (render + apply 8 templates)
-DELETE /api/v1/clusters/:namespace/:name     # Delete cluster
+GET  /api/v1/health
+GET  /api/v1/clusters
+GET  /api/v1/clusters/events                                    # SSE
+GET  /api/v1/clusters/:namespace/:name
+POST /api/v1/clusters
+DELETE /api/v1/clusters/:namespace/:name
 
-GET    /api/v1/clusters/:namespace/:name/machines               # Machines của cluster
-GET    /api/v1/clusters/:namespace/:name/machinedeployments     # MachineDeployments
-GET    /api/v1/clusters/:namespace/:name/machinesets            # MachineSets (replica health)
-GET    /api/v1/clusters/:namespace/:name/controlplane           # KubeadmControlPlane detail
+GET  /api/v1/clusters/:namespace/:name/machines
+GET  /api/v1/clusters/:namespace/:name/machinedeployments
+GET  /api/v1/clusters/:namespace/:name/machinesets
+GET  /api/v1/clusters/:namespace/:name/controlplane
+GET  /api/v1/clusters/:namespace/:name/machines/:node/shell     # WebSocket PTY
 
-GET    /api/v1/logs/pods                     # List CAPI controller pods
-GET    /api/v1/logs/:namespace/:name         # Stream pod logs
-
-GET    /api/v1/os/flavors                    # OpenStack flavors (chỉ có khi OS_* env được set)
-GET    /api/v1/os/images                     # OpenStack images
-GET    /api/v1/os/networks                   # OpenStack networks
-GET    /api/v1/os/security-groups            # OpenStack security groups
+GET  /api/v1/logs/pods
+GET  /api/v1/logs/:namespace/:name
+GET  /api/v1/system/tools                                       # Check kubectl-node_shell
 ```
 
-## 6. ClusterConfig Model (Frontend ↔ Backend)
-Khi thêm field mới vào form, cần cập nhật đồng thời:
-1. `internal/models/cluster.go` — thêm field với json tag
-2. Template `.tmpl` tương ứng trong `internal/assets/templates/openstack/`
-3. `web/src/app/clusters/create/page.tsx` — thêm input + state
+## 6. Docker Build Rules
+```bash
+# LUÔN vendor trước khi build Docker
+go mod vendor
 
-Fields đặc biệt:
-- `CloudsYamlBase64` / `CaCertBase64`: Frontend encode base64 từ raw text, KHÔNG gửi plaintext.
-- `ClusterName` và `Namespace` thường đồng giá trị — form tự sync.
+# LUÔN unset NODE_ENV trước npm install (NODE_ENV=production bỏ devDeps!)
+unset NODE_ENV && npm install --legacy-peer-deps
 
-## 7. Bảo mật (Security Rules)
-- **KHÔNG BAO GIỜ** commit file chứa credentials thật vào Git:
-  - `clouds.yaml` (kể cả đã encode base64)
-  - Kubeconfig files
-  - `.env` files
-  - YAML manifest đã render với thông tin thật
-- Thư mục `docs/templates/` đã bị xóa vì chứa credentials thật — KHÔNG tạo lại.
-- Nếu cần ví dụ template: dùng placeholder rõ ràng như `<your-network-id>`, `<base64-encoded-clouds-yaml>`.
-- Luôn kiểm tra `.gitignore` trước khi `git add`.
+# Verify packages đủ (~400+)
+npm list --depth=0 | wc -l
+
+# Build
+docker build -t <image>:<tag> .
+```
+
+## 7. Bảo mật
+- KHÔNG commit clouds.yaml, kubeconfig, .env
+- Node Shell: kubeconfig workload chỉ tồn tại trong `/tmp/wl-kubeconfig-*.yaml`, xóa sau session
 
 ## 8. Môi trường Development
 ```bash
-# Backend (Terminal 1)
-export PATH=$PATH:/usr/local/go/bin
-export KUBECONFIG=~/.kube/config
-# export OS_AUTH_URL / OS_USERNAME / OS_PASSWORD / OS_PROJECT_NAME (tuỳ chọn)
+# Backend
+export PATH=$PATH:/usr/local/go/bin && export KUBECONFIG=~/.kube/config
 go run cmd/dashboard/main.go
 
-# Frontend (Terminal 2)
-export NVM_DIR="$HOME/.nvm" && source $NVM_DIR/nvm.sh
+# Frontend
+export NVM_DIR="$HOME/.nvm" && source $NVM_DIR/nvm.sh && unset NODE_ENV
 cd web && npm run dev
 ```
-- Node.js quản lý bằng **nvm** tại `~/.nvm/versions/node/v24.13.0/`
-- Go binary tại `/usr/local/go/bin/go`
-- Backend chạy trước, Frontend dùng proxy để forward `/api/v1/*`
 
-## 9. Quản lý Context & Tiến độ
-- Đọc `HISTORY.md` để biết trạng thái hiện tại và những gì đã làm.
-- Đọc `docs/` trước khi thay đổi kiến trúc lớn.
-- Sau khi hoàn thành feature/fix quan trọng: cập nhật `HISTORY.md`.
-- Nếu thay đổi kiến trúc hoặc thêm API mới: cập nhật `docs/03-api-spec.md`.
-- Nếu thay đổi template engine: cập nhật `docs/05-template-engine.md`.
+## 9. Checklist trước khi báo Done
+```bash
+go build -mod=vendor ./... && echo "BUILD OK"
+go test -mod=vendor ./internal/... && echo "TESTS OK"
+# Verify frontend build clean
+cd web && npm run build 2>&1 | tail -5
+```
 
-## 10. Next Steps (Bước tiếp theo ưu tiên)
-1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex) cho multi-user.
-2. **Helm Chart Production** — Hoàn thiện chart để deploy lên Management Cluster chính thức.
+## 10. Next Steps
+1. **RBAC & Authentication** — OIDC (Keycloak/Dex)
+2. **Helm Chart Production** — Deploy chính thức lên Management Cluster

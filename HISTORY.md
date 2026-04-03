@@ -205,3 +205,74 @@
 ### ⏭️ Bước tiếp theo (Next Steps):
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex).
 2. **Helm Chart Production** — Hoàn thiện chart để deploy chính thức.
+## 🟢 Session 7: Node Shell Terminal + Docker Production (2026-04-03)
+
+### Tính năng: Node Shell Terminal (SSH vào workload node)
+
+**Backend — WebSocket Shell:**
+- Endpoint: `GET /api/v1/clusters/:namespace/:name/machines/:node/shell`
+- Endpoint: `GET /api/v1/system/tools` — check kubectl-node_shell binary
+- Flow chuẩn CAPI:
+  1. Đọc Secret `<cluster>-kubeconfig` trong namespace workload (CAPI convention)
+  2. Write ra temp file `/tmp/wl-kubeconfig-*.yaml` (xóa sau session)
+  3. Spawn `kubectl node-shell <node> --kubeconfig=<tmpfile>` với **PTY thật** (`creack/pty`)
+  4. Proxy stdin/stdout qua WebSocket bidirectional
+- **Clean env** — loại bỏ `KUBERNETES_SERVICE_HOST/PORT` để kubectl dùng workload kubeconfig thay vì in-cluster ServiceAccount
+- **PTY** (`github.com/creack/pty`) — bắt buộc để shell prompt hiển thị đúng, hỗ trợ resize terminal
+
+**Frontend — NodeTerminal component:**
+- `web/src/components/ui/NodeTerminal.tsx` — xterm.js terminal emulator
+- WebSocket URL dùng `window.location.host` (không hardcode port)
+- Gửi resize event `{"type":"resize","cols":N,"rows":N}` khi terminal resize
+- Dark theme, traffic lights, font monospace
+
+### Docker Production Build
+
+**Dockerfile (multi-stage):**
+- Stage 1: Node.js frontend builder (`npm install --legacy-peer-deps`)
+- Stage 2: Go backend builder (`-mod=vendor`, không cần internet)
+- Stage 3: Final — `node:20-alpine` + nginx + tini + kubectl + kubectl-node_shell
+- Cài kubectl + kubectl-node_shell binary trong Docker image
+- `go mod vendor` — copy 76MB dependencies vào source, build không cần proxy.golang.org
+
+**nginx reverse proxy (nginx.conf):**
+- Single port 80 — thay cho 2 ports 3000+8080
+- HTTP proxy → Next.js `:3000`
+- `/api/v1/*` proxy → Go `:8080` với WebSocket upgrade headers
+- `proxy_read_timeout 3600s` cho long-running shell sessions
+
+**K8s Deployment (deployment.yaml):**
+- Chỉ expose 1 port: `containerPort: 80`, NodePort `30000 → 80`
+- Probe: `GET /api/v1/health` port 80
+
+**Các lỗi Docker đã fix:**
+| Lỗi | Fix |
+|---|---|
+| `npm ci --only=production=false` invalid | `npm install --legacy-peer-deps` |
+| `go mod download` timeout (no internet) | `go mod vendor` + `-mod=vendor` |
+| `PORT=3000` conflict Go vs Next.js | Set `PORT=8080` inline cho từng process |
+| TypeScript errors `percent undefined` | `(percent ?? 0) * 100` |
+| `NODE_ENV=production` mất devDeps | `unset NODE_ENV` trước npm install |
+
+**Các lỗi Shell đã fix:**
+| Lỗi | Fix |
+|---|---|
+| "Connection error" (WebSocket port 8080 hardcoded) | Dùng `window.location.host` |
+| "kubectl not found" | Thêm kubectl vào Dockerfile |
+| "plugin chưa cài" dù đã cài | `LookPath("kubectl-node_shell")` thay vì chạy kubectl |
+| `Forbidden: cannot list nodes` | Clean env — bỏ `KUBERNETES_SERVICE_HOST` |
+| Không thấy shell prompt | Dùng PTY thật (`creack/pty`) thay vì pipe |
+
+### Build + Tests
+- `go build -mod=vendor` ✅
+- 22/22 tests PASS ✅
+- `npm run build` TypeScript clean ✅
+
+### 📍 Trạng thái hiện tại
+- **Node Shell Terminal:** Hoạt động end-to-end — click SSH → terminal mở → shell prompt hiển thị
+- **Docker image:** Production-ready, single port 80, nginx proxy WS+HTTP
+- **K8s deployment:** NodePort 30000
+
+### ⏭️ Bước tiếp theo
+1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex)
+2. **Helm Chart Production** — Hoàn thiện chart deploy chính thức
