@@ -347,6 +347,113 @@ func (s *ClusterService) ListClusterEvents(ctx context.Context, namespace, clust
 	return result, nil
 }
 
+// FormatHelmReleaseProxy biến HelmReleaseProxy thành map cho UI
+func (s *ClusterService) FormatHelmReleaseProxy(item *unstructured.Unstructured) map[string]interface{} {
+	chartName, _, _       := unstructured.NestedString(item.Object, "spec", "chartName")
+	repoURL, _, _         := unstructured.NestedString(item.Object, "spec", "repoURL")
+	version, _, _         := unstructured.NestedString(item.Object, "spec", "version")
+	releaseName, _, _     := unstructured.NestedString(item.Object, "spec", "releaseName")
+	releaseNS, _, _       := unstructured.NestedString(item.Object, "spec", "namespace")
+	status, _, _          := unstructured.NestedString(item.Object, "status", "status")
+	revision, _, _        := unstructured.NestedInt64(item.Object, "status", "revision")
+	message, _, _         := unstructured.NestedString(item.Object, "status", "message")
+	conditions, _, _      := unstructured.NestedSlice(item.Object, "status", "conditions")
+
+	proxyName := item.GetLabels()["helmreleaseproxy.addons.cluster.x-k8s.io/helmchartproxy-name"]
+
+	return map[string]interface{}{
+		"name":               item.GetName(),
+		"namespace":          item.GetNamespace(),
+		"helmChartProxyName": proxyName,
+		"chartName":          chartName,
+		"repoURL":            repoURL,
+		"version":            version,
+		"releaseName":        releaseName,
+		"releaseNamespace":   releaseNS,
+		"status":             status,
+		"revision":           revision,
+		"message":            message,
+		"conditions":         conditions,
+		"createdAt":          item.GetCreationTimestamp(),
+	}
+}
+
+// ListClusterAddons lấy HelmReleaseProxy + HelmChartProxy cho cluster.
+// HelmChartProxy không có HelmReleaseProxy tương ứng (vd: fail ở bước template) cũng được hiển thị.
+func (s *ClusterService) ListClusterAddons(ctx context.Context, namespace, clusterName string) ([]map[string]interface{}, error) {
+	hrpItems, err := s.repo.ListHelmReleaseProxies(ctx, namespace, clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build map HelmChartProxy name → full object
+	hcpMap := map[string]*unstructured.Unstructured{}
+	if hcpItems, hcpErr := s.repo.ListHelmChartProxies(ctx, namespace); hcpErr == nil {
+		for i := range hcpItems {
+			hcpMap[hcpItems[i].GetName()] = &hcpItems[i]
+		}
+	}
+
+	result := make([]map[string]interface{}, 0)
+	coveredHCP := map[string]bool{}
+
+	// HelmReleaseProxy items — merge HelmChartProxy conditions vào
+	for _, item := range hrpItems {
+		formatted := s.FormatHelmReleaseProxy(&item)
+		proxyName, _ := formatted["helmChartProxyName"].(string)
+		coveredHCP[proxyName] = true
+		if hcp, ok := hcpMap[proxyName]; ok {
+			conds, _, _ := unstructured.NestedSlice(hcp.Object, "status", "conditions")
+			formatted["helmChartProxyConditions"] = conds
+		} else {
+			formatted["helmChartProxyConditions"] = []interface{}{}
+		}
+		result = append(result, formatted)
+	}
+
+	// HelmChartProxy không có HelmReleaseProxy — thường là fail ở bước render template
+	for hcpName, hcp := range hcpMap {
+		if coveredHCP[hcpName] {
+			continue
+		}
+		conds, _, _ := unstructured.NestedSlice(hcp.Object, "status", "conditions")
+		chartName, _, _ := unstructured.NestedString(hcp.Object, "spec", "chartName")
+		repoURL, _, _   := unstructured.NestedString(hcp.Object, "spec", "repoURL")
+		version, _, _   := unstructured.NestedString(hcp.Object, "spec", "version")
+		releaseName, _, _ := unstructured.NestedString(hcp.Object, "spec", "releaseName")
+
+		// Derive status từ conditions
+		status := "pending"
+		for _, c := range conds {
+			cm, _ := c.(map[string]interface{})
+			if cm["type"] == "Ready" && cm["status"] == "False" {
+				status = "failed"
+				break
+			}
+		}
+
+		result = append(result, map[string]interface{}{
+			"name":                     hcpName,
+			"namespace":                hcp.GetNamespace(),
+			"helmChartProxyName":       hcpName,
+			"chartName":                chartName,
+			"repoURL":                  repoURL,
+			"version":                  version,
+			"releaseName":              releaseName,
+			"releaseNamespace":         "",
+			"status":                   status,
+			"revision":                 int64(0),
+			"message":                  "",
+			"conditions":               []interface{}{},
+			"helmChartProxyConditions": conds,
+			"createdAt":                hcp.GetCreationTimestamp(),
+			"noReleaseProxy":           true,
+		})
+	}
+
+	return result, nil
+}
+
 // GetWorkloadKubeconfig expose lên service layer
 func (s *ClusterService) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {
 	return s.repo.GetWorkloadKubeconfig(ctx, namespace, clusterName)

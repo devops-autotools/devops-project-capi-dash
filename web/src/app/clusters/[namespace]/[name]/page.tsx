@@ -5,7 +5,7 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import {
   ArrowLeft, RefreshCw, CheckCircle2, Clock, AlertCircle,
-  Activity, Code, Info, Server, Cpu, AlertTriangle, XCircle, Terminal, Radio,
+  Activity, Code, Info, Server, Cpu, AlertTriangle, XCircle, Terminal, Radio, Package,
 } from "lucide-react"
 
 const NodeTerminal = dynamic(() => import("@/components/ui/NodeTerminal"), { ssr: false })
@@ -25,6 +25,17 @@ interface Machine {
   version: string; nodeName: string; infrastructure: string
   bootstrapReady: boolean; infrastructureReady: boolean
   failureReason: string; failureMessage: string; createdAt: string
+}
+interface HelmCondition { type: string; status: string; reason?: string; message?: string }
+interface HelmReleaseProxy {
+  name: string; namespace: string; helmChartProxyName: string
+  chartName: string; repoURL: string; version: string
+  releaseName: string; releaseNamespace: string
+  status: string; revision: number; message: string
+  conditions: HelmCondition[]
+  helmChartProxyConditions: HelmCondition[]
+  noReleaseProxy?: boolean
+  createdAt: string
 }
 
 function PhaseBadge({ phase }: { phase: string }) {
@@ -59,21 +70,24 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
   const [cluster,   setCluster]  = useState<ClusterDetail | null>(null)
   const [machines,  setMachines] = useState<Machine[]>([])
   const [events,    setEvents]   = useState<ClusterEvent[]>([])
+  const [addons,    setAddons]   = useState<HelmReleaseProxy[]>([])
   const [loading,   setLoading]  = useState(true)
-  const [activeTab, setActiveTab]= useState<'overview'|'machines'|'conditions'|'events'|'yaml'>('overview')
+  const [activeTab, setActiveTab]= useState<'overview'|'machines'|'conditions'|'events'|'yaml'|'addons'>('overview')
   const [shellNode, setShellNode]= useState<Machine | null>(null)
 
   const fetchDetail = useCallback(async () => {
     setLoading(true)
     try {
-      const [cRes, mRes, eRes] = await Promise.all([
+      const [cRes, mRes, eRes, aRes] = await Promise.all([
         fetch(`/api/v1/clusters/${namespace}/${name}`),
         fetch(`/api/v1/clusters/${namespace}/${name}/machines`),
         fetch(`/api/v1/clusters/${namespace}/${name}/events`),
+        fetch(`/api/v1/clusters/${namespace}/${name}/addons`),
       ])
       if (cRes.ok) setCluster(await cRes.json())
       if (mRes.ok) setMachines(await mRes.json())
       if (eRes.ok) setEvents(await eRes.json())
+      if (aRes.ok) setAddons(await aRes.json())
     } catch (err) { console.error(err) } finally { setLoading(false) }
   }, [namespace, name])
 
@@ -88,12 +102,14 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
 
   const runningMachines = machines.filter(m => m.phase === "Running").length
   const failedMachines  = machines.filter(m => m.phase === "Failed").length
-  const warningCount = events.filter(e => e.type === "Warning").length
+  const warningCount    = events.filter(e => e.type === "Warning").length
+  const failedAddons    = addons.filter(a => a.status === "failed" || a.conditions?.some(c => c.type === "Ready" && c.status === "False")).length
   const tabs = [
     { key: 'overview',   label: 'Overview',   icon: Info },
     { key: 'machines',   label: 'Machines',   icon: Cpu,     badge: machines.length },
     { key: 'conditions', label: 'Conditions', icon: Activity },
     { key: 'events',     label: 'Events',     icon: Radio,   badge: warningCount > 0 ? warningCount : undefined, badgeColor: 'bg-amber-100 text-amber-700' },
+    { key: 'addons',     label: 'Add-ons',    icon: Package, badge: addons.length > 0 ? addons.length : undefined, badgeColor: failedAddons > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' },
     { key: 'yaml',       label: 'YAML',       icon: Code },
   ] as const
 
@@ -311,6 +327,92 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ namesp
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Add-ons */}
+        {activeTab === 'addons' && (
+          <div className="space-y-4">
+            {addons.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-16 text-center">
+                <Package size={32} className="mx-auto text-slate-300 mb-3"/>
+                <p className="text-slate-400 font-medium">No add-ons found for this cluster.</p>
+                <p className="text-slate-400 text-sm mt-1">Add-ons are deployed via HelmChartProxy (CAAPH).</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-4 text-sm">
+                    <span className="flex items-center gap-1.5 text-slate-600"><Package size={14}/>{addons.length} add-on(s)</span>
+                    {failedAddons > 0 && <span className="flex items-center gap-1.5 text-rose-600 font-semibold"><XCircle size={14}/>{failedAddons} failed</span>}
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-slate-500 font-medium border-b">
+                      <tr>
+                        <th className="px-6 py-3">Add-on (HelmChartProxy)</th>
+                        <th className="px-6 py-3">HelmReleaseProxy</th>
+                        <th className="px-6 py-3">Chart / Version</th>
+                        <th className="px-6 py-3">Release Namespace</th>
+                        <th className="px-6 py-3">Revision</th>
+                        <th className="px-6 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {addons.map((addon, i) => {
+                        const failedRelConds  = addon.conditions?.filter(c => c.status === "False") ?? []
+                        const failedHcpConds  = addon.helmChartProxyConditions?.filter(c => c.status === "False") ?? []
+                        const isFailed  = addon.status === "failed" || failedRelConds.length > 0 || failedHcpConds.length > 0
+                        const isPending = !addon.status || addon.status === "pending-install" || addon.status === "pending-upgrade"
+                        const relMsgs = failedRelConds.map(c => `[HelmReleaseProxy/${c.type}] ${c.reason}${c.message ? ': ' + c.message : ''}`)
+                        const hcpMsgs = failedHcpConds.map(c => `[HelmChartProxy/${c.type}] ${c.reason}${c.message ? ': ' + c.message : ''}`)
+                        const failMsgs = [...relMsgs, ...hcpMsgs].length > 0
+                          ? [...relMsgs, ...hcpMsgs]
+                          : (isFailed && addon.message ? [addon.message] : [])
+                        return (
+                          <tr key={i} className={`hover:bg-slate-50 transition-colors ${isFailed ? 'border-l-4 border-rose-400' : ''}`}>
+                            <td className="px-6 py-4">
+                              <p className="font-semibold text-slate-900">{addon.helmChartProxyName || addon.name}</p>
+                              <p className="text-xs text-slate-400 font-mono mt-0.5">{addon.releaseName}</p>
+                            </td>
+                            <td className="px-6 py-4 font-mono text-xs text-slate-500">
+                              {addon.noReleaseProxy
+                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-rose-50 text-rose-500 border border-rose-200"><AlertTriangle size={10}/>not created</span>
+                                : addon.name}
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-mono text-xs text-slate-700">{addon.chartName || "—"}</p>
+                              <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">{addon.version || "—"}</span>
+                            </td>
+                            <td className="px-6 py-4 font-mono text-xs text-slate-600">{addon.releaseNamespace || "—"}</td>
+                            <td className="px-6 py-4 text-xs text-slate-500 text-center">{addon.revision > 0 ? `r${addon.revision}` : "—"}</td>
+                            <td className="px-6 py-4">
+                              <div className="space-y-1.5">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  isFailed  ? 'bg-rose-100 text-rose-700' :
+                                  isPending ? 'bg-blue-100 text-blue-700' :
+                                              'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                  {isFailed  ? <XCircle size={10}/> : isPending ? <Clock size={10} className="animate-spin"/> : <CheckCircle2 size={10}/>}
+                                  {addon.status || "unknown"}
+                                </span>
+                                {failMsgs.map((msg, mi) => (
+                                  <p key={mi} className="text-xs text-rose-600 flex items-start gap-1 max-w-sm">
+                                    <AlertTriangle size={11} className="shrink-0 mt-0.5"/>
+                                    <span className="break-all">{msg}</span>
+                                  </p>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}

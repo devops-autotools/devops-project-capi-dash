@@ -317,6 +317,48 @@ func (r *K8sRepository) ListClusterEvents(ctx context.Context, namespace, cluste
 	return filtered, nil
 }
 
+// ListHelmChartProxies lấy danh sách HelmChartProxy trong namespace (CAAPH CRD)
+func (r *K8sRepository) ListHelmChartProxies(ctx context.Context, namespace string) ([]unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "addons.cluster.x-k8s.io",
+		Version: "v1alpha1",
+		Kind:    "HelmChartProxy",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, fmt.Errorf("HelmChartProxy CRD not found: %w", err)
+	}
+	list, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+// ListHelmReleaseProxies lấy danh sách HelmReleaseProxy của một cluster (CAAPH CRD)
+func (r *K8sRepository) ListHelmReleaseProxies(ctx context.Context, namespace, clusterName string) ([]unstructured.Unstructured, error) {
+	gvk := schema.GroupVersionKind{
+		Group:   "addons.cluster.x-k8s.io",
+		Version: "v1alpha1",
+		Kind:    "HelmReleaseProxy",
+	}
+	mapping, err := r.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, fmt.Errorf("HelmReleaseProxy CRD not found (CAAPH not installed?): %w", err)
+	}
+
+	listOpts := metav1.ListOptions{}
+	if clusterName != "" {
+		listOpts.LabelSelector = "cluster.x-k8s.io/cluster-name=" + clusterName
+	}
+
+	list, err := r.dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(ctx, listOpts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
 // GetWorkloadKubeconfig lấy kubeconfig của workload cluster từ CAPI Secret
 // CAPI tự tạo Secret "<cluster-name>-kubeconfig" trong namespace của cluster
 func (r *K8sRepository) GetWorkloadKubeconfig(ctx context.Context, namespace, clusterName string) ([]byte, error) {

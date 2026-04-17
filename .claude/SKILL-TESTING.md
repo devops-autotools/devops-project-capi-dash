@@ -149,6 +149,25 @@ make build-safe        # test + build — dùng trước deploy
 3. **Expected:** Không có badge nào bị "undefined" hoặc crash
 4. Nếu cluster không có MachineHealthCheck → **Expected:** UI vẫn load bình thường, không báo lỗi
 
+### TC-14: Add-ons Tab — Healthy Add-ons
+1. Vào `/clusters/:ns/:name` → tab **Add-ons**
+2. **Expected:** Table hiển thị danh sách HelmReleaseProxy của cluster
+3. **Expected:** Add-on deployed → badge xanh "deployed"
+4. **Expected:** Badge số trên tab = tổng số add-ons, màu xám
+
+### TC-15: Add-ons Tab — Failed Add-on
+1. Vào cluster detail có HelmReleaseProxy với `status.status = "failed"`
+2. Click tab **Add-ons**
+3. **Expected:** Badge trên tab màu đỏ + số lượng failed
+4. **Expected:** Row add-on có border-left đỏ
+5. **Expected:** Error message hiển thị inline dưới status badge
+
+### TC-16: Add-ons Tab — Empty State
+1. Vào cluster detail không có HelmReleaseProxy nào
+2. Click tab **Add-ons**
+3. **Expected:** Empty state với icon Package, text hướng dẫn CAAPH
+4. **Expected:** Không có lỗi console
+
 ### TC-13: Settings Page — System Info
 1. Vào `/settings`
 2. **Expected:** Backend health hiển thị "UP" (xanh)

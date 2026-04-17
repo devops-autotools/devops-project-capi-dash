@@ -80,6 +80,7 @@ GET  /api/v1/clusters/:namespace/:name/machinedeployments
 GET  /api/v1/clusters/:namespace/:name/machinesets
 GET  /api/v1/clusters/:namespace/:name/controlplane
 GET  /api/v1/clusters/:namespace/:name/machines/:node/shell     # WebSocket PTY
+GET  /api/v1/clusters/:namespace/:name/addons                   # HelmReleaseProxy list (CAAPH)
 
 GET  /api/v1/logs/pods
 GET  /api/v1/logs/:namespace/:name

@@ -10,7 +10,7 @@
 | `/` | `src/app/page.tsx` | **Monitoring Dashboard** — charts, health bar, live event feed. KHÔNG có table cluster, KHÔNG có CRUD |
 | `/clusters` | `src/app/clusters/page.tsx` | **Workload Clusters** — table list đầy đủ, stats bar, Delete + View Detail actions, SSE real-time |
 | `/clusters/create` | `src/app/clusters/create/page.tsx` | Form tạo cluster mới |
-| `/clusters/[ns]/[name]` | `src/app/clusters/[namespace]/[name]/page.tsx` | Chi tiết cluster: tabs Overview / Machines / Conditions / YAML |
+| `/clusters/[ns]/[name]` | `src/app/clusters/[namespace]/[name]/page.tsx` | Chi tiết cluster: tabs Overview / Machines / Conditions / Events / Add-ons / YAML |
 | `/logs` | `src/app/logs/page.tsx` | Terminal log viewer cho CAPI controller pods |
 | `/settings` | `src/app/settings/page.tsx` | **System Info** — backend health, CAPI component status, cluster count, about |
 
@@ -89,6 +89,7 @@ GET    /api/v1/clusters/:ns/:name/machinedeployments               MachineDeploy
 GET    /api/v1/clusters/:ns/:name/machinesets                      MachineSets
 GET    /api/v1/clusters/:ns/:name/controlplane                     KubeadmControlPlane
 WS     /api/v1/clusters/:ns/:name/machines/:node/shell             Node Shell PTY (WebSocket)
+GET    /api/v1/clusters/:ns/:name/addons                         HelmReleaseProxy list (CAAPH add-ons)
 
 GET    /api/v1/logs/pods                                           Controller pods trong capi-system
 GET    /api/v1/logs/:ns/:name                                      Pod logs (SSE)

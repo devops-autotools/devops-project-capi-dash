@@ -74,6 +74,7 @@ func main() {
 		v1.GET("/clusters/:namespace/:name/machinesets",            clusterCtrl.ListMachineSets)
 		v1.GET("/clusters/:namespace/:name/controlplane",           clusterCtrl.GetKubeadmControlPlane)
 		v1.GET("/clusters/:namespace/:name/events",                 clusterCtrl.ListClusterEvents)
+		v1.GET("/clusters/:namespace/:name/addons",                 clusterCtrl.ListClusterAddons)
 
 		// Logs
 		v1.GET("/logs/pods",              clusterCtrl.ListPods)

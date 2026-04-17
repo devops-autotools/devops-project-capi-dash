@@ -276,3 +276,47 @@
 ### ⏭️ Bước tiếp theo
 1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex)
 2. **Helm Chart Production** — Hoàn thiện chart deploy chính thức
+
+## 🟢 Session 8: Add-ons Tab (HelmReleaseProxy) (2026-04-17)
+
+### Tính năng: Add-ons Tab trong Cluster Detail
+
+**Yêu cầu:** Mỗi workload cluster cần tab Add-ons hiển thị toàn bộ add-on (HelmChartProxy/HelmReleaseProxy) đã deploy, bao gồm thông tin lỗi inline nếu add-on fails.
+
+**Backend — endpoint mới:**
+- `GET /api/v1/clusters/:namespace/:name/addons`
+- Repository: `ListHelmReleaseProxies()` — query CRD `addons.cluster.x-k8s.io/v1alpha1/HelmReleaseProxy`, filter bằng label `addons.cluster.x-k8s.io/cluster-name=<cluster>`
+- Service: `FormatHelmReleaseProxy()` + `ListClusterAddons()` — extract chart name, version, release namespace, status, revision, error message, conditions
+- Controller: `ListClusterAddons()` handler
+- Route: đăng ký `GET /clusters/:namespace/:name/addons` trong `main.go`
+
+**RBAC — thêm permission:**
+- `addons.cluster.x-k8s.io` → `helmreleaseproxies`, `helmchartproxies` (get, list, watch)
+
+**Frontend — tab "Add-ons" mới trong Cluster Detail:**
+- Icon: `Package` (lucide-react)
+- Badge trên tab: tổng số add-ons — đỏ nếu có failed, xám nếu tất cả healthy
+- Table: Add-on Name, Chart, Version, Release Namespace, Revision, Status
+- Status badge: xanh (deployed), xanh nhạt + spin (pending), đỏ (failed)
+- Nếu failed: hiển thị error message inline dưới badge với icon AlertTriangle
+- Empty state: thông báo không có add-on, kèm gợi ý CAAPH
+
+**Data model (HelmReleaseProxy):**
+- Namespace-scoped, cùng namespace với workload cluster
+- Label `addons.cluster.x-k8s.io/cluster-name` dùng để filter theo cluster
+- Label `addons.cluster.x-k8s.io/helm-chart-proxy-name` liên kết với HelmChartProxy cha
+- `status.status`: deployed | failed | pending-install | pending-upgrade
+- `status.conditions[Ready]`: True/False — source of truth cho UI badge
+
+**Build + Tests:**
+- `go build -mod=vendor` ✅
+- 22/22 tests PASS ✅
+- `npm run build` TypeScript clean ✅
+
+### 📍 Trạng thái hiện tại
+- **Add-ons Tab:** Hoàn thành — hiển thị toàn bộ HelmReleaseProxy theo cluster, lỗi inline
+- **RBAC:** Cập nhật thêm permission CAAPH
+
+### ⏭️ Bước tiếp theo
+1. **RBAC & Authentication** — Tích hợp OIDC (Keycloak/Dex)
+2. **Helm Chart Production** — Hoàn thiện chart deploy chính thức

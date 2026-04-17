@@ -191,6 +191,18 @@ func (ctrl *ClusterController) ListClusterEvents(c *gin.Context) {
 	c.JSON(http.StatusOK, events)
 }
 
+// ListClusterAddons handles GET /api/v1/clusters/:namespace/:name/addons
+func (ctrl *ClusterController) ListClusterAddons(c *gin.Context) {
+	namespace   := c.Param("namespace")
+	clusterName := c.Param("name")
+	addons, err := ctrl.Service.ListClusterAddons(c.Request.Context(), namespace, clusterName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, addons)
+}
+
 // GetKubeadmControlPlane handles GET /api/v1/clusters/:namespace/:name/controlplane
 func (ctrl *ClusterController) GetKubeadmControlPlane(c *gin.Context) {
 	namespace   := c.Param("namespace")
